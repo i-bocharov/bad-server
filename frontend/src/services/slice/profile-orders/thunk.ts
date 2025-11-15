@@ -2,31 +2,31 @@ import { IOrderPaginationResult, IOrderResult } from '../../../utils/types'
 import { createAsyncThunk } from '../../hooks'
 
 export const getCurrentUserOrders = createAsyncThunk<
-    IOrderPaginationResult,
-    void
+  IOrderPaginationResult,
+  void
 >(
-    'profileOrder/getCurrentUserOrders',
-    (_, { extra: { getCurrentUserOrders } }) => {
-        return getCurrentUserOrders()
-    }
+  'profileOrder/getCurrentUserOrders',
+  (_, { extra: { getCurrentUserOrders } }) => {
+    return getCurrentUserOrders()
+  }
 )
 
 export const fetchOrdersMeWithFilters = createAsyncThunk<
-    IOrderPaginationResult,
-    Record<string, unknown>
+  IOrderPaginationResult,
+  Record<string, unknown>
 >(
-    'profileOrder/fetchOrdersMeWithFilters',
-    (filters, { extra: { getCurrentUserOrders } }) => {
-        return getCurrentUserOrders(filters)
-    }
+  'profileOrder/fetchOrdersMeWithFilters',
+  (filters, { extra: { getCurrentUserOrders } }) => {
+    return getCurrentUserOrders(filters)
+  }
 )
 
 export const getCurrentUserOrderByNumber = createAsyncThunk<
-    IOrderResult,
-    string
+  IOrderResult,
+  string
 >(
-    'profileOrder/getCurrentUserOrderByNumber',
-    (orderNumber, { extra: { getOrderCurrentUserByNumber } }) => {
-        return getOrderCurrentUserByNumber(orderNumber)
-    }
+  'profileOrder/getCurrentUserOrderByNumber',
+  (orderNumber, { extra: { getOrderCurrentUserByNumber } }) => {
+    return getOrderCurrentUserByNumber(orderNumber)
+  }
 )

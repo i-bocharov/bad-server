@@ -1,9 +1,9 @@
 import { Router } from 'express'
 import {
-    deleteCustomer,
-    getCustomerById,
-    getCustomers,
-    updateCustomer,
+  deleteCustomer,
+  getCustomerById,
+  getCustomers,
+  updateCustomer,
 } from '../controllers/customers'
 import auth from '../middlewares/auth'
 

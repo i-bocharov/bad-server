@@ -6,48 +6,48 @@ import { createOrder } from './thunk'
 import { TOrderState } from './type'
 
 const initialState: TOrderState = {
-    info: {
-        address: '',
-        payment: PaymentType.Card,
-        phone: '',
-        total: 0,
-        email: '',
-        items: [],
-    },
-    status: RequestStatus.Idle,
+  info: {
+    address: '',
+    payment: PaymentType.Card,
+    phone: '',
+    total: 0,
+    email: '',
+    items: [],
+  },
+  status: RequestStatus.Idle,
 }
 
 export const orderFormSlice = createSlice({
-    name: 'order-form',
-    initialState,
-    reducers: {
-        setItems: (
-            state: TOrderState,
-            { payload }: PayloadAction<{ items: string[]; total: number }>
-        ) => {
-            state.info = {
-                ...state.info,
-                items: payload.items,
-                total: payload.total,
-            }
-        },
-        setInfo: (state, { payload }: PayloadAction<Partial<IOrder>>) => {
-            state.info = { ...state.info, ...payload }
-        },
+  name: 'order-form',
+  initialState,
+  reducers: {
+    setItems: (
+      state: TOrderState,
+      { payload }: PayloadAction<{ items: string[]; total: number }>
+    ) => {
+      state.info = {
+        ...state.info,
+        items: payload.items,
+        total: payload.total,
+      }
     },
-    extraReducers: (builder) => {
-        builder
-            .addCase(createOrder.pending, (state) => {
-                state.status = RequestStatus.Loading
-            })
-            .addCase(createOrder.fulfilled, (state) => {
-                state.status = RequestStatus.Success
-            })
-            .addCase(createOrder.rejected, (state) => {
-                state.status = RequestStatus.Failed
-            })
+    setInfo: (state, { payload }: PayloadAction<Partial<IOrder>>) => {
+      state.info = { ...state.info, ...payload }
     },
-    selectors: {
-        selectOrderInfo: (state: TOrderState) => state.info,
-    },
+  },
+  extraReducers: (builder) => {
+    builder
+      .addCase(createOrder.pending, (state) => {
+        state.status = RequestStatus.Loading
+      })
+      .addCase(createOrder.fulfilled, (state) => {
+        state.status = RequestStatus.Success
+      })
+      .addCase(createOrder.rejected, (state) => {
+        state.status = RequestStatus.Failed
+      })
+  },
+  selectors: {
+    selectOrderInfo: (state: TOrderState) => state.info,
+  },
 })

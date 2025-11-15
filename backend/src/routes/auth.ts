@@ -1,12 +1,12 @@
 import { Router } from 'express'
 import {
-    getCurrentUser,
-    getCurrentUserRoles,
-    login,
-    logout,
-    refreshAccessToken,
-    register,
-    updateCurrentUser,
+  getCurrentUser,
+  getCurrentUserRoles,
+  login,
+  logout,
+  refreshAccessToken,
+  register,
+  updateCurrentUser,
 } from '../controllers/auth'
 import auth from '../middlewares/auth'
 
