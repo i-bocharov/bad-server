@@ -1,6 +1,6 @@
 import { Preloader } from '@components/preloader'
 import { IProduct } from '@types'
-import { useParams } from 'react-router'
+import { useParams } from 'react-router-dom'
 import { useSelector } from '../../services/hooks'
 import { productsSelector } from '../../services/slice/products'
 import Card from '../card/card'

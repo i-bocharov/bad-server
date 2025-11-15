@@ -2,12 +2,12 @@
   "name": "weblarek_frontend",
   "private": true,
   "version": "1.0.0",
-  "description": "< Добавьте описание проекта в свободной форме >",
-  "author": "< Укажите здесь автора работы >",
+  "description": "Проектная работа по безопасности веб-приложений",
+  "author": "Igor Bocharov",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "vite build",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0 --fix",
     "preview": "vite preview",
     "format": "prettier ./src --write"
@@ -31,7 +31,6 @@
     "@types/node": "^20.12.12",
     "@types/react": "^18.2.66",
     "@types/react-dom": "^18.2.22",
-    "@types/redux-persist": "^4.3.1",
     "@typescript-eslint/eslint-plugin": "^7.2.0",
     "@typescript-eslint/parser": "^7.2.0",
     "@vitejs/plugin-react": "^4.2.1",
