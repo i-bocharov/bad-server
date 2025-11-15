@@ -105,7 +105,7 @@ export const getCustomers = async (
       filters.$or = [{ name: searchRegex }, { lastOrder: { $in: orderIds } }]
     }
 
-    const sort: { [key: string]: any } = {}
+    const sort: { [key: string]: 1 | -1 } = {}
 
     if (sortField && sortOrder) {
       sort[sortField as string] = sortOrder === 'desc' ? -1 : 1
