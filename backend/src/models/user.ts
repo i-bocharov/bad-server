@@ -14,6 +14,7 @@ export enum Role {
 }
 
 export interface IUser extends Document {
+  _id: Types.ObjectId
   name: string
   email: string
   password: string
@@ -105,13 +106,10 @@ const userSchema = new mongoose.Schema<IUser, IUserModel, IUserMethods>(
     // Возможно удаление пароля в контроллере создания, т.к. select: false не работает в случае создания сущности https://mongoosejs.com/docs/api/document.html#Document.prototype.toJSON()
     toJSON: {
       virtuals: true,
-      transform: (_doc, ret) => {
-        delete ret.tokens
-        delete ret.password
-        delete ret._id
-        delete ret.roles
-        return ret
-      },
+      transform: (
+        _doc,
+        { tokens: _tokens, password: _password, _id, roles: _roles, ...rest }
+      ) => rest,
     },
   }
 )
