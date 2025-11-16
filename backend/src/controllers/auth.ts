@@ -17,11 +17,10 @@ const login = async (req: Request, res: Response, next: NextFunction) => {
     const user = await User.findUserByCredentials(email, password)
     const accessToken = user.generateAccessToken()
     const refreshToken = await user.generateRefreshToken()
-    res.cookie(
-      REFRESH_TOKEN.cookie.name,
-      refreshToken,
-      REFRESH_TOKEN.cookie.options
-    )
+    res.cookie(REFRESH_TOKEN.cookie.name, refreshToken, {
+      ...REFRESH_TOKEN.cookie.options,
+      sameSite: 'strict',
+    })
     return res.json({
       success: true,
       user,
@@ -41,11 +40,10 @@ const register = async (req: Request, res: Response, next: NextFunction) => {
     const accessToken = newUser.generateAccessToken()
     const refreshToken = await newUser.generateRefreshToken()
 
-    res.cookie(
-      REFRESH_TOKEN.cookie.name,
-      refreshToken,
-      REFRESH_TOKEN.cookie.options
-    )
+    res.cookie(REFRESH_TOKEN.cookie.name, refreshToken, {
+      ...REFRESH_TOKEN.cookie.options,
+      sameSite: 'strict',
+    })
     return res.status(constants.HTTP_STATUS_CREATED).json({
       success: true,
       user: newUser,
@@ -142,11 +140,10 @@ const refreshAccessToken = async (
     const userWithRefreshTkn = await deleteRefreshTokenInUser(req, res, next)
     const accessToken = await userWithRefreshTkn.generateAccessToken()
     const refreshToken = await userWithRefreshTkn.generateRefreshToken()
-    res.cookie(
-      REFRESH_TOKEN.cookie.name,
-      refreshToken,
-      REFRESH_TOKEN.cookie.options
-    )
+    res.cookie(REFRESH_TOKEN.cookie.name, refreshToken, {
+      ...REFRESH_TOKEN.cookie.options,
+      sameSite: 'strict',
+    })
     return res.json({
       success: true,
       user: userWithRefreshTkn,
