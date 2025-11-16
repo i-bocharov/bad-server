@@ -3,12 +3,31 @@ import { NextFunction, Request, Response } from 'express'
 import { constants } from 'http2'
 import jwt, { JwtPayload } from 'jsonwebtoken'
 import { Error as MongooseError } from 'mongoose'
+import bcrypt from 'bcryptjs' // Импортируем bcrypt для безопасного хэширования паролей
 import { REFRESH_TOKEN } from '../config'
 import BadRequestError from '../errors/bad-request-error'
 import ConflictError from '../errors/conflict-error'
 import NotFoundError from '../errors/not-found-error'
 import UnauthorizedError from '../errors/unauthorized-error'
 import User from '../models/user'
+
+// Интерфейс для ошибки Mongoose о дубликате, чтобы безопасно проверять error.code
+interface MongooseDuplicateKeyError extends Error {
+  code: number
+}
+
+// Функция-предикат (type guard) для проверки типа ошибки.
+// Это позволяет Typescript "узнать" тип ошибки внутри условного блока.
+function isMongooseDuplicateKeyError(
+  error: unknown
+): error is MongooseDuplicateKeyError {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    (error as MongooseDuplicateKeyError).code === 11000
+  )
+}
 
 // POST /auth/login
 const login = async (req: Request, res: Response, next: NextFunction) => {
@@ -35,7 +54,12 @@ const login = async (req: Request, res: Response, next: NextFunction) => {
 const register = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { email, password, name } = req.body
-    const newUser = new User({ email, password, name })
+
+    // Хешируем пароль перед сохранением с помощью bcrypt.
+    // bcrypt добавляет "соль" и выполняет множество итераций, делая подбор пароля очень медленным.
+    const hashedPassword = await bcrypt.hash(password, 10) // 10 - это "стоимость" хеширования, хороший баланс.
+
+    const newUser = new User({ email, password: hashedPassword, name })
     await newUser.save()
     const accessToken = newUser.generateAccessToken()
     const refreshToken = await newUser.generateRefreshToken()
@@ -49,11 +73,12 @@ const register = async (req: Request, res: Response, next: NextFunction) => {
       user: newUser,
       accessToken,
     })
-  } catch (error) {
+  } catch (error: unknown) {
     if (error instanceof MongooseError.ValidationError) {
       return next(new BadRequestError(error.message))
     }
-    if (error instanceof Error && error.message.includes('E11000')) {
+    // Используем type guard для безопасной проверки кода ошибки.
+    if (isMongooseDuplicateKeyError(error)) {
       return next(
         new ConflictError('Пользователь с таким email уже существует')
       )
@@ -74,7 +99,7 @@ const getCurrentUser = async (
       () => new NotFoundError('Пользователь по заданному id отсутствует в базе')
     )
     res.json({ user, success: true })
-  } catch (error) {
+  } catch (error: unknown) {
     next(error)
   }
 }
@@ -125,7 +150,7 @@ const logout = async (req: Request, res: Response, next: NextFunction) => {
     res.status(200).json({
       success: true,
     })
-  } catch (error) {
+  } catch (error: unknown) {
     next(error)
   }
 }
@@ -138,7 +163,7 @@ const refreshAccessToken = async (
 ) => {
   try {
     const userWithRefreshTkn = await deleteRefreshTokenInUser(req, res, next)
-    const accessToken = await userWithRefreshTkn.generateAccessToken()
+    const accessToken = userWithRefreshTkn.generateAccessToken()
     const refreshToken = await userWithRefreshTkn.generateRefreshToken()
     res.cookie(REFRESH_TOKEN.cookie.name, refreshToken, {
       ...REFRESH_TOKEN.cookie.options,
@@ -149,7 +174,7 @@ const refreshAccessToken = async (
       user: userWithRefreshTkn,
       accessToken,
     })
-  } catch (error) {
+  } catch (error: unknown) {
     return next(error)
   }
 }
@@ -167,7 +192,7 @@ const getCurrentUserRoles = async (
       () => new NotFoundError('Пользователь по заданному id отсутствует в базе')
     )
     res.status(200).json(res.locals.user.roles)
-  } catch (error) {
+  } catch (error: unknown) {
     next(error)
   }
 }
@@ -179,13 +204,23 @@ const updateCurrentUser = async (
 ) => {
   const userId = res.locals.user._id
   try {
-    const updatedUser = await User.findByIdAndUpdate(userId, req.body, {
+    // Явно указываем, какие поля разрешено обновлять.
+    // Это предотвратит смену роли (`roles`) или других критичных данных.
+    const { name, email } = req.body
+    const updateData = { name, email }
+    const updatedUser = await User.findByIdAndUpdate(userId, updateData, {
       new: true,
+      runValidators: true, // runValidators важен для проверки email и длины имени
     }).orFail(
       () => new NotFoundError('Пользователь по заданному id отсутствует в базе')
     )
     res.status(200).json(updatedUser)
-  } catch (error) {
+  } catch (error: unknown) {
+    if (isMongooseDuplicateKeyError(error)) {
+      return next(
+        new ConflictError('Пользователь с таким email уже существует')
+      )
+    }
     next(error)
   }
 }
