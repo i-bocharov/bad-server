@@ -3,7 +3,7 @@ import crypto from 'crypto'
 import jwt from 'jsonwebtoken'
 import mongoose, { Document, HydratedDocument, Model, Types } from 'mongoose'
 import validator from 'validator'
-import md5 from 'md5'
+import bcrypt from 'bcryptjs'
 
 import { ACCESS_TOKEN, REFRESH_TOKEN } from '../config'
 import UnauthorizedError from '../errors/unauthorized-error'
@@ -31,7 +31,6 @@ export interface IUser extends Document {
 interface IUserMethods {
   generateAccessToken(): string
   generateRefreshToken(): Promise<string>
-  toJSON(): string
   calculateOrderStats(): Promise<void>
 }
 
@@ -65,7 +64,6 @@ const userSchema = new mongoose.Schema<IUser, IUserModel, IUserMethods>(
     password: {
       type: String,
       required: [true, 'Поле "password" должно быть заполнено'],
-      minlength: [6, 'Минимальная длина поля "password" - 6'],
       select: false,
     },
 
@@ -106,27 +104,14 @@ const userSchema = new mongoose.Schema<IUser, IUserModel, IUserMethods>(
     // Возможно удаление пароля в контроллере создания, т.к. select: false не работает в случае создания сущности https://mongoosejs.com/docs/api/document.html#Document.prototype.toJSON()
     toJSON: {
       virtuals: true,
-      transform: (
-        _doc,
-        { tokens: _tokens, password: _password, _id, roles: _roles, ...rest }
-      ) => rest,
+      transform(_doc, ret) {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { password, tokens, ...user } = ret
+        return user
+      },
     },
   }
 )
-
-// Возможно добавление хеша в контроллере регистрации
-userSchema.pre('save', async function hashingPassword(next) {
-  try {
-    if (this.isModified('password')) {
-      this.password = md5(this.password)
-    }
-    next()
-  } catch (error) {
-    next(error as Error)
-  }
-})
-
-// Можно лучше: централизованное создание accessToken и  refresh токена
 
 userSchema.methods.generateAccessToken = function generateAccessToken() {
   const user = this
@@ -135,6 +120,7 @@ userSchema.methods.generateAccessToken = function generateAccessToken() {
     {
       _id: user._id.toString(),
       email: user.email,
+      roles: user.roles,
     },
     ACCESS_TOKEN.secret,
     {
@@ -179,12 +165,15 @@ userSchema.statics.findUserByCredentials = async function findByCredentials(
   const user = await this.findOne({ email })
     .select('+password')
     .orFail(() => new UnauthorizedError('Неправильные почта или пароль'))
-  const passwdMatch = md5(password) === user.password
-  if (!passwdMatch) {
-    return Promise.reject(
-      new UnauthorizedError('Неправильные почта или пароль')
-    )
+
+  // Сравниваем пароль с хешем с помощью bcrypt.compare.
+  // Эта функция защищена от timing-атак и работает с "солеными" хешами.
+  const isMatch = await bcrypt.compare(password, user.password)
+
+  if (!isMatch) {
+    throw new UnauthorizedError('Неправильные почта или пароль')
   }
+
   return user
 }
 
