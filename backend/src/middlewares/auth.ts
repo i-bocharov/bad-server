@@ -5,27 +5,19 @@ import { ACCESS_TOKEN } from '../config'
 import ForbiddenError from '../errors/forbidden-error'
 import NotFoundError from '../errors/not-found-error'
 import UnauthorizedError from '../errors/unauthorized-error'
-import UserModel, { Role } from '../models/user'
-
-// есть файл middlewares/auth.js, в нём мидлвэр для проверки JWT;
+import UserModel, { IUser, Role } from '../models/user'
 
 const auth = async (req: Request, res: Response, next: NextFunction) => {
-  let payload: JwtPayload | null = null
   const authHeader = req.header('Authorization')
   if (!authHeader?.startsWith('Bearer ')) {
-    throw new UnauthorizedError('Невалидный токен')
+    throw new UnauthorizedError('Необходима авторизация')
   }
-  try {
-    const accessTokenParts = authHeader.split(' ')
-    const aTkn = accessTokenParts[1]
-    payload = jwt.verify(aTkn, ACCESS_TOKEN.secret) as JwtPayload
 
-    const user = await UserModel.findOne(
-      {
-        _id: new Types.ObjectId(payload.sub),
-      },
-      { password: 0, salt: 0 }
-    )
+  try {
+    const accessToken = authHeader.split(' ')[1]
+    const payload = jwt.verify(accessToken, ACCESS_TOKEN.secret) as JwtPayload
+
+    const user = await UserModel.findById(payload.sub, { password: 0, salt: 0 })
 
     if (!user) {
       return next(new ForbiddenError('Нет доступа'))
@@ -33,7 +25,7 @@ const auth = async (req: Request, res: Response, next: NextFunction) => {
     res.locals.user = user
 
     return next()
-  } catch (error) {
+  } catch (error: unknown) {
     if (error instanceof Error && error.name === 'TokenExpiredError') {
       return next(new UnauthorizedError('Истек срок действия токена'))
     }
@@ -43,11 +35,13 @@ const auth = async (req: Request, res: Response, next: NextFunction) => {
 
 export function roleGuardMiddleware(...roles: Role[]) {
   return (_req: Request, res: Response, next: NextFunction) => {
-    if (!res.locals.user) {
+    const user = res.locals.user as IUser | undefined
+
+    if (!user) {
       return next(new UnauthorizedError('Необходима авторизация'))
     }
 
-    const hasAccess = roles.some((role) => res.locals.user.roles.includes(role))
+    const hasAccess = roles.some((role) => user.roles.includes(role))
 
     if (!hasAccess) {
       return next(new ForbiddenError('Доступ запрещен'))
@@ -57,19 +51,20 @@ export function roleGuardMiddleware(...roles: Role[]) {
   }
 }
 
-export function currentUserAccessMiddleware<T>(
+export function currentUserAccessMiddleware<T extends { _id: Types.ObjectId }>(
   model: Model<T>,
   idProperty: string,
   userProperty: keyof T
 ) {
   return async (req: Request, res: Response, next: NextFunction) => {
     const id = req.params[idProperty]
+    const user = res.locals.user as IUser | undefined
 
-    if (!res.locals.user) {
+    if (!user) {
       return next(new UnauthorizedError('Необходима авторизация'))
     }
 
-    if (res.locals.user.roles.includes(Role.Admin)) {
+    if (user.roles.includes(Role.Admin)) {
       return next()
     }
 
@@ -79,10 +74,13 @@ export function currentUserAccessMiddleware<T>(
       return next(new NotFoundError('Не найдено'))
     }
 
-    const userEntityId = entity[userProperty] as Types.ObjectId
-    const hasAccess = new Types.ObjectId(res.locals.user.id).equals(
-      userEntityId
-    )
+    const userEntityId = entity[userProperty]
+
+    if (!(userEntityId instanceof Types.ObjectId)) {
+      return next(new ForbiddenError('Доступ запрещен'))
+    }
+
+    const hasAccess = user._id.equals(userEntityId)
 
     if (!hasAccess) {
       return next(new ForbiddenError('Доступ запрещен'))
