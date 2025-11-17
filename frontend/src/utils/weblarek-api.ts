@@ -1,3 +1,4 @@
+import store, { RootState } from '@store/store'
 import { API_URL, CDN_URL } from '@constants'
 
 import {
@@ -16,7 +17,7 @@ import {
   UserResponse,
   UserResponseToken,
 } from '@types'
-import { getCookie, setCookie } from './cookie'
+import { setCookie } from './cookie'
 
 export const enum RequestStatus {
   Idle = 'idle',
@@ -92,13 +93,17 @@ class Api {
 
   // Базовый метод запроса, который просто отправляет запрос с текущим токеном.
   protected async request<T>(endpoint: string, options: RequestInit) {
+    // Берем токен из Redux store, а не из cookie.
+    // Это делает store единственным источником правды.
+    const accessToken = (store.getState() as RootState).user.accessToken
+
     const res = await fetch(`${this.baseUrl}${endpoint}`, {
       ...this.options,
       ...options,
       headers: {
         ...this.options.headers,
         ...options.headers,
-        Authorization: `Bearer ${getCookie('accessToken')}`,
+        Authorization: `Bearer ${accessToken}`,
       },
     })
     return this.handleResponse<T>(res)

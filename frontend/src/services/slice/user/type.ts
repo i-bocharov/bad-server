@@ -6,4 +6,5 @@ export type TUserState = {
   data: IUser | null
   roles: string[]
   requestStatus: RequestStatus
+  accessToken: string | null
 }
