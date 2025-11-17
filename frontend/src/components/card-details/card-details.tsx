@@ -1,8 +1,8 @@
 import { Preloader } from '@components/preloader'
 import { IProduct } from '@types'
 import { useParams } from 'react-router-dom'
-import { useSelector } from '../../services/hooks'
-import { productsSelector } from '../../services/slice/products'
+import { useSelector } from '@services/hooks'
+import { productsSelector } from '@services/slice/products'
 import Card from '../card/card'
 
 const CardDetails = () => {

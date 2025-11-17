@@ -1,5 +1,5 @@
-import { useSelector } from '../../../services/hooks'
-import { basketSelector } from '../../../services/slice/basket'
+import { useSelector } from '@services/hooks'
+import { basketSelector } from '@services/slice/basket'
 
 export const useIsBasket = (id: string) => {
   const { selectBasketItems } = basketSelector

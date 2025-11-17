@@ -2,12 +2,12 @@ import { useLocation, useNavigate } from 'react-router-dom'
 
 import Button from '@components/button'
 import { useEffect, useRef } from 'react'
-import { useActionCreators, useSelector } from '../../services/hooks'
+import { useActionCreators, useSelector } from '@services/hooks'
 import {
   orderFormActions,
   orderFormSelector,
-} from '../../services/slice/orderForm'
-import { AppRoute } from '../../utils/constants'
+} from '@services/slice/orderForm'
+import { AppRoute } from '@utils/constants'
 import Form, { Input } from '../form'
 import useFormWithValidation from '../form/hooks/useFormWithValidation'
 import { Radio } from '../form/radio'

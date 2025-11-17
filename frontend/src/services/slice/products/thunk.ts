@@ -1,5 +1,5 @@
-import { IFile, IProduct, IProductPaginationResult } from '../../../utils/types'
-import { createAsyncThunk } from '../../hooks'
+import { IFile, IProduct, IProductPaginationResult } from '@utils/types'
+import { createAsyncThunk } from '@services/hooks'
 
 export const getProducts = createAsyncThunk<
   IProductPaginationResult,

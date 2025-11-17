@@ -1,19 +1,19 @@
 import InputMask from '@mona-health/react-input-mask'
 import { SyntheticEvent, useEffect, useRef } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { AppRoute } from '../../utils/constants'
+import { AppRoute } from '@utils/constants'
 import Button from '../button/button'
 import { Input } from '../form'
 import Form from '../form/form'
 import useFormWithValidation from '../form/hooks/useFormWithValidation'
 import { ContactsFormValues } from './helpers/types'
 
-import { useActionCreators, useSelector } from '../../services/hooks'
-import { basketActions } from '../../services/slice/basket'
+import { useActionCreators, useSelector } from '@services/hooks'
+import { basketActions } from '@services/slice/basket'
 import {
   orderFormActions,
   orderFormSelector,
-} from '../../services/slice/orderForm'
+} from '@services/slice/orderForm'
 import EditorInput from '../editor-text/editor-input'
 import styles from './order.module.scss'
 

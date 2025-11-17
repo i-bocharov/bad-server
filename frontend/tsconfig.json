@@ -30,8 +30,8 @@
       "@slices/*": ["./src/services/slice/*"],
       "@store/*": ["./src/services/*"],
       "@assets/*": ["./src/assets/*"],
-      "@utils/*": ["./src/utils/*"]
-    }
+      "@utils/*": ["./src/utils/*"],
+      "@services/*": ["./src/services/*"]}
   },
   "include": ["src", "vite.config.ts"],
   "references": [{ "path": "./tsconfig.node.json" }]

@@ -4,15 +4,15 @@ import useFormWithValidation from '@components/form/hooks/useFormWithValidation'
 import { SyntheticEvent, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
-import { useActionCreators } from '../../services/hooks'
-import { productsActions } from '../../services/slice/products'
+import { useActionCreators } from '@services/hooks'
+import { productsActions } from '@services/slice/products'
 import {
   AppRoute,
   CATEGORY_CLASSES,
   CATEGORY_TYPES,
   OptionType,
-} from '../../utils/constants'
-import { IFile } from '../../utils/types'
+} from '@utils/constants'
+import { IFile } from '@utils/types'
 import FileInput from '../form/file-input'
 import Select from '../select'
 import styles from './admin.module.scss'

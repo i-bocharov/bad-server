@@ -1,5 +1,5 @@
-import { IOrderPaginationResult, IOrderResult } from '../../../utils/types'
-import { createAsyncThunk } from '../../hooks'
+import { IOrderPaginationResult, IOrderResult } from '@utils/types'
+import { createAsyncThunk } from '@services/hooks'
 
 export const getCurrentUserOrders = createAsyncThunk<
   IOrderPaginationResult,

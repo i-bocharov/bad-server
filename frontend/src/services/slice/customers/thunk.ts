@@ -1,6 +1,5 @@
 import { ICustomerPaginationResult, ICustomerResult } from '@types'
-import { createAsyncThunk } from '../../hooks'
-
+import { createAsyncThunk } from '@services/hooks'
 export const getAllCustomers = createAsyncThunk<
   ICustomerPaginationResult,
   void

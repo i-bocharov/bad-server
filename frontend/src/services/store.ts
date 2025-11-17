@@ -9,7 +9,7 @@ import {
 } from 'redux-persist'
 
 import persistStore from 'redux-persist/es/persistStore'
-import weblarekApi from '../utils/weblarek-api'
+import weblarekApi from '@utils/weblarek-api'
 import { rootReducer } from './rootReducer'
 const store = configureStore({
   reducer: rootReducer,

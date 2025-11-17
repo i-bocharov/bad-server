@@ -3,9 +3,9 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   customersActions,
   customersSelector,
-} from '../../services/slice/customers'
-import { fetchCustomersWithFilters } from '../../services/slice/customers/thunk'
-import { AppRoute } from '../../utils/constants'
+} from '@services/slice/customers'
+import { fetchCustomersWithFilters } from '@services/slice/customers/thunk'
+import { AppRoute } from '@utils/constants'
 import Filter from '../filter'
 import styles from './admin.module.scss'
 import { customersFilterFields } from './helpers/customersFilterFields'

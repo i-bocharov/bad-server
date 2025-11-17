@@ -47,7 +47,7 @@
 
     &::before {
       content: ' ';
-      @include mixins.background('../../assets/success.png');
+      @include mixins.background('@assets/success.png');
       width: 256px;
       height: 256px;
     }

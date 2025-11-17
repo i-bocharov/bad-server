@@ -1,8 +1,11 @@
 import { PayloadAction, createSlice } from '@reduxjs/toolkit'
-import { adapterOrderFromServer } from '../../../utils/adapterOrderFromServer'
-import { adapterOrdersFromServer } from '../../../utils/adapterOrdersFromServer'
-import { IOrderPaginationResult, IOrderResult } from '../../../utils/types'
-import { RequestStatus } from '../../../utils/weblarek-api'
+import { adapterOrderFromServer } from '@utils/adapterOrderFromServer'
+import { adapterOrdersFromServer } from '@utils/adapterOrdersFromServer'
+import {
+  IOrderPaginationResult,
+  IOrderResult,
+  RequestStatus,
+} from '@utils/types'
 import {
   fetchOrdersWithFilters,
   getAllOrders,

@@ -12,7 +12,7 @@ import {
   useSelector as selectorHook,
 } from 'react-redux'
 
-import { WebLarekAPI } from '../utils/weblarek-api'
+import { WebLarekAPI } from '@utils/weblarek-api'
 import { AppDispatch, RootState } from './store'
 
 export const useDispatch = () => dispatchHook<AppDispatch>()

@@ -1,6 +1,5 @@
-import { adapterCustomerFromServer } from '../../../utils/adapterCustomerFromServer'
-import { ICustomerResult } from '../../../utils/types'
-import { RequestStatus } from '../../../utils/weblarek-api'
+import { adapterCustomerFromServer } from '@utils/adapterCustomerFromServer'
+import { ICustomerResult, RequestStatus } from '@utils/types'
 
 export interface CustomersValueType {
   title: string

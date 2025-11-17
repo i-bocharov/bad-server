@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { AppRoute } from '../../utils/constants'
+import { AppRoute } from '@utils/constants'
 import styles from './header.module.scss'
 
 export default function HeaderNavigateAdmin() {

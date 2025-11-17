@@ -1,5 +1,4 @@
-import { IUser } from '../../../utils/types'
-import { RequestStatus } from '../../../utils/weblarek-api'
+import { IUser, RequestStatus } from '@utils/types'
 
 export type TUserState = {
   isAuthChecked: boolean

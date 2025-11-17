@@ -1,6 +1,5 @@
-import { IOrderResult, StatusType } from '@types'
-import { adapterOrderFromServer } from '../../../utils/adapterOrderFromServer'
-import { RequestStatus } from '../../../utils/weblarek-api'
+import { IOrderResult, RequestStatus, StatusType } from '@types'
+import { adapterOrderFromServer } from '@utils/adapterOrderFromServer'
 
 export interface OrderValueType {
   title: string

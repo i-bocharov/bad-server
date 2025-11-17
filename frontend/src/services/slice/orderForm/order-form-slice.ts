@@ -1,7 +1,6 @@
-import { RequestStatus } from '@api'
 import { PayloadAction, createSlice } from '@reduxjs/toolkit'
-import { PaymentType } from '../../../components/order/helpers/types'
-import { IOrder } from '../../../utils/types'
+import { PaymentType } from '@components/order/helpers/types'
+import { IOrder, RequestStatus } from '@utils/types'
 import { createOrder } from './thunk'
 import { TOrderState } from './type'
 

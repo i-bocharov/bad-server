@@ -1,8 +1,8 @@
 import clsx from 'clsx'
 import { Link, useLocation } from 'react-router-dom'
-import { useSelector } from '../../services/hooks'
-import { basketSelector } from '../../services/slice/basket'
-import { AppRoute } from '../../utils/constants'
+import { useSelector } from '@services/hooks'
+import { basketSelector } from '@services/slice/basket'
+import { AppRoute } from '@utils/constants'
 import styles from './header.module.scss'
 
 export default function HeaderNavigateProfile() {

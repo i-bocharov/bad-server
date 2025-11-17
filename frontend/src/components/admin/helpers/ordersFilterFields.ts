@@ -1,4 +1,4 @@
-import { FILTER_ORDER_TYPES, FilterType } from '../../../utils/constants'
+import { FILTER_ORDER_TYPES, FilterType } from '@utils/constants'
 
 export const ordersFilterFields = [
   { label: 'Дата заказа' },

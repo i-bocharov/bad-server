@@ -18,18 +18,7 @@ import {
   UserResponseToken,
 } from '@types'
 import { setCookie } from './cookie'
-
-export const enum RequestStatus {
-  Idle = 'idle',
-  Loading = 'loading',
-  Success = 'success',
-  Failed = 'failed',
-}
-
-export type ApiListResponse<Type> = {
-  total: number
-  items: Type[]
-}
+import { setAccessToken } from '@slices/user/user-slice'
 
 // --- Начало механизма защиты от гонки состояний при обновлении токена ---
 
@@ -144,7 +133,7 @@ class Api {
       return new Promise<T>((resolve, reject) => {
         this.refreshToken()
           .then((refreshData) => {
-            setCookie('accessToken', refreshData.accessToken)
+            store.dispatch(setAccessToken(refreshData.accessToken))
             processQueue(null) // Успех! "Отпускаем" все запросы из очереди.
             resolve(this.request<T>(endpoint, options)) // Повторяем наш оригинальный запрос.
           })

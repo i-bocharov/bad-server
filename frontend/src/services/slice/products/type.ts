@@ -1,5 +1,4 @@
-import { IProduct } from '@types'
-import { RequestStatus } from '../../../utils/weblarek-api'
+import { IProduct, RequestStatus } from '@types'
 
 export type TProductState = {
   data: IProduct[]

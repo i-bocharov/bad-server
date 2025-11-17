@@ -11,8 +11,8 @@ import { Link, useLocation, useSearchParams } from 'react-router-dom'
 import {
   customersActions,
   customersSelector,
-} from '../../services/slice/customers'
-import { fetchCustomersWithFilters } from '../../services/slice/customers/thunk'
+} from '@services/slice/customers'
+import { fetchCustomersWithFilters } from '@services/slice/customers/thunk'
 import styles from './admin.module.scss'
 
 export default function AdminCustomers() {

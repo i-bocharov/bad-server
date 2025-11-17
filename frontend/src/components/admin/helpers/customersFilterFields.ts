@@ -1,4 +1,4 @@
-import { FilterType } from '../../../utils/constants'
+import { FilterType } from '@utils/constants'
 
 export const customersFilterFields = [
   { label: 'Дата регистрации' },

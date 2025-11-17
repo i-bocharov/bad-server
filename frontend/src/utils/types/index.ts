@@ -1,5 +1,5 @@
 import { CATEGORY_CLASSES, FILTER_ORDER_MAP } from '@constants'
-import { PaymentType } from '../../components/order/helpers/types'
+import { PaymentType } from '@components/order/helpers/types'
 
 export enum StatusType {
   Cancelled = 'cancelled',
@@ -140,4 +140,16 @@ export interface IOrderResult {
   phone: string
   createdAt: string
   updatedAt: string
+}
+
+export const enum RequestStatus {
+  Idle = 'idle',
+  Loading = 'loading',
+  Success = 'success',
+  Failed = 'failed',
+}
+
+export type ApiListResponse<Type> = {
+  total: number
+  items: Type[]
 }

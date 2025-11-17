@@ -6,7 +6,7 @@ import {
   useLocation,
   useNavigate,
 } from 'react-router-dom'
-import '../../index.scss'
+import '@index.scss'
 import styles from './app.module.scss'
 
 import AdminCustomers from '@components/admin/admin-customers'

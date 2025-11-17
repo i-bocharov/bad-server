@@ -1,6 +1,5 @@
-import { RequestStatus } from '@api'
 import { createSlice, PayloadAction } from '@reduxjs/toolkit'
-import { isActionPending, isActionRejected } from '../../../utils/redux'
+import { isActionPending, isActionRejected } from '@utils/redux'
 import {
   checkUserAuth,
   checkUserRoles,
@@ -9,6 +8,7 @@ import {
   registerUser,
 } from './thunk'
 import { TUserState } from './type'
+import { RequestStatus } from '@types'
 
 const initialState: TUserState = {
   isAuthChecked: false,

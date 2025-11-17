@@ -2,7 +2,7 @@ import { IProduct } from '@types'
 import clsx from 'clsx'
 import { ElementType } from 'react'
 import { useLocation } from 'react-router-dom'
-import EditIcon from '../../assets/edit.svg?react'
+import EditIcon from '@assets/edit.svg?react'
 import styles from './card-admin.module.scss'
 
 type CardProps = {

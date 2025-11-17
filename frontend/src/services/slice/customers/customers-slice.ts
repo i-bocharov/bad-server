@@ -1,17 +1,17 @@
 import { PayloadAction, createSlice } from '@reduxjs/toolkit'
-import { adapterCustomerFromServer } from '../../../utils/adapterCustomerFromServer'
-import { adapterCustomersFromServer } from '../../../utils/adapterCustomersFromServer'
 import {
   ICustomerPaginationResult,
   ICustomerResult,
-} from '../../../utils/types'
-import { RequestStatus } from '../../../utils/weblarek-api'
+  RequestStatus,
+} from '@utils/types'
 import {
   fetchCustomersWithFilters,
   getAllCustomers,
   getCustomerById,
 } from './thunk'
 import { CustomersDataList, FiltersCustomers, TCustomersState } from './type'
+import { adapterCustomersFromServer } from '@utils/adapterCustomersFromServer'
+import { adapterCustomerFromServer } from '@utils/adapterCustomerFromServer'
 
 const initialState: TCustomersState = {
   customers: [],

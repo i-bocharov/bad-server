@@ -1,6 +1,6 @@
 import clsx from 'clsx'
 import React from 'react'
-import ArrowPaginateIcon from '../../assets/arrow_right.svg?react'
+import ArrowPaginateIcon from '@assets/arrow_right.svg?react'
 import styles from './pagination.module.scss'
 interface PaginationProps {
   currentPage: number
