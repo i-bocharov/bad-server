@@ -30,6 +30,36 @@ export type ApiListResponse<Type> = {
   items: Type[]
 }
 
+// --- Начало механизма защиты от гонки состояний при обновлении токена ---
+
+// Определяем строгий тип для элемента очереди, чтобы избежать `any`.
+// `resolve` не принимает значений, он просто сигналирует о продолжении.
+// `reject` принимает `unknown`, так как ошибка может быть любого типа.
+type FailedRequest = {
+  resolve: () => void
+  reject: (reason?: unknown) => void
+}
+
+// Флаг, который показывает, что процесс обновления токена уже запущен.
+let isRefreshing = false
+
+// Типизированная очередь для "зависших" запросов.
+let failedQueue: FailedRequest[] = []
+
+// Функция, которая обрабатывает очередь после завершения обновления токена.
+const processQueue = (error: Error | null) => {
+  failedQueue.forEach((prom) => {
+    if (error) {
+      prom.reject(error)
+    } else {
+      prom.resolve()
+    }
+  })
+  failedQueue = []
+}
+
+// --- Конец механизма защиты ---
+
 class Api {
   private readonly baseUrl: string
   protected options: RequestInit
@@ -38,9 +68,16 @@ class Api {
     this.baseUrl = baseUrl
     this.options = {
       headers: {
+        'Content-Type': 'application/json',
         ...((options.headers as object) ?? {}),
       },
     }
+  }
+
+  // Принудительный выход из системы при невосстановимых ошибках авторизации.
+  private forceLogout() {
+    setCookie('accessToken', '', { expires: new Date(0) })
+    window.location.replace('/login')
   }
 
   protected handleResponse<T>(response: Response): Promise<T> {
@@ -53,43 +90,67 @@ class Api {
           )
   }
 
+  // Базовый метод запроса, который просто отправляет запрос с текущим токеном.
   protected async request<T>(endpoint: string, options: RequestInit) {
-    try {
-      const res = await fetch(`${this.baseUrl}${endpoint}`, {
-        ...this.options,
-        ...options,
-      })
-      return await this.handleResponse<T>(res)
-    } catch (error) {
-      return Promise.reject(error)
-    }
-  }
-
-  private refreshToken = () => {
-    return this.request<UserResponseToken>('/auth/token', {
-      method: 'GET',
-      credentials: 'include',
+    const res = await fetch(`${this.baseUrl}${endpoint}`, {
+      ...this.options,
+      ...options,
+      headers: {
+        ...this.options.headers,
+        ...options.headers,
+        Authorization: `Bearer ${getCookie('accessToken')}`,
+      },
     })
+    return this.handleResponse<T>(res)
   }
 
+  // Метод для вызова эндпоинта обновления токена.
+  private refreshToken = () => {
+    return fetch(`${this.baseUrl}/auth/token`, {
+      method: 'GET',
+      credentials: 'include', // Заставляет браузер отправить httpOnly refreshToken.
+    }).then(this.handleResponse<UserResponseToken>)
+  }
+
+  // "Умный" метод для запросов, требующих авторизации.
   protected requestWithRefresh = async <T>(
     endpoint: string,
     options: RequestInit
-  ) => {
+  ): Promise<T> => {
     try {
       return await this.request<T>(endpoint, options)
-    } catch (_error: unknown) {
-      const refreshData = await this.refreshToken()
-      if (!refreshData.success) {
-        return Promise.reject(refreshData)
+    } catch (err: unknown) {
+      const error = err as { statusCode: number }
+      // Если это не ошибка 401, просто пробрасываем ее дальше.
+      if (error.statusCode !== 401) {
+        throw err
       }
-      setCookie('accessToken', refreshData.accessToken)
-      return await this.request<T>(endpoint, {
-        ...options,
-        headers: {
-          ...options.headers,
-          Authorization: `Bearer ${getCookie('accessToken')}`,
-        },
+
+      // Если другой запрос уже обновляет токен, становимся в очередь и ждем.
+      if (isRefreshing) {
+        return new Promise<void>((resolve, reject) => {
+          failedQueue.push({ resolve, reject })
+        }).then(() => this.request<T>(endpoint, options))
+      }
+
+      isRefreshing = true
+
+      // Запускаем процесс обновления.
+      return new Promise<T>((resolve, reject) => {
+        this.refreshToken()
+          .then((refreshData) => {
+            setCookie('accessToken', refreshData.accessToken)
+            processQueue(null) // Успех! "Отпускаем" все запросы из очереди.
+            resolve(this.request<T>(endpoint, options)) // Повторяем наш оригинальный запрос.
+          })
+          .catch((refreshErr) => {
+            processQueue(refreshErr) // Провал! Провалятся все запросы в очереди.
+            this.forceLogout() // Выбрасываем пользователя на страницу логина.
+            reject(refreshErr)
+          })
+          .finally(() => {
+            isRefreshing = false // Завершаем процесс обновления.
+          })
       })
     }
   }
@@ -110,6 +171,8 @@ export class WebLarekAPI extends Api implements IWebLarekAPI {
     super(baseUrl, options)
     this.cdn = cdn
   }
+
+  // --- Публичные методы API ---
 
   getProductItem = (id: string): Promise<IProduct> => {
     return this.request<IProduct>(`/product/${id}`, { method: 'GET' }).then(
@@ -147,11 +210,7 @@ export class WebLarekAPI extends Api implements IWebLarekAPI {
     return this.requestWithRefresh<IOrderResult>('/order', {
       method: 'POST',
       body: JSON.stringify(order),
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${getCookie('accessToken')}`,
-      },
-    }).then((data: IOrderResult) => data)
+    })
   }
 
   updateOrderStatus = (
@@ -161,10 +220,6 @@ export class WebLarekAPI extends Api implements IWebLarekAPI {
     return this.requestWithRefresh<IOrderResult>(`/order/${orderNumber}`, {
       method: 'PATCH',
       body: JSON.stringify({ status }),
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${getCookie('accessToken')}`,
-      },
     })
   }
 
@@ -178,9 +233,6 @@ export class WebLarekAPI extends Api implements IWebLarekAPI {
       `/order/all?${queryParams}`,
       {
         method: 'GET',
-        headers: {
-          Authorization: `Bearer ${getCookie('accessToken')}`,
-        },
       }
     )
   }
@@ -195,9 +247,6 @@ export class WebLarekAPI extends Api implements IWebLarekAPI {
       `/order/all/me?${queryParams}`,
       {
         method: 'GET',
-        headers: {
-          Authorization: `Bearer ${getCookie('accessToken')}`,
-        },
       }
     )
   }
@@ -205,7 +254,6 @@ export class WebLarekAPI extends Api implements IWebLarekAPI {
   getOrderByNumber = (orderNumber: string): Promise<IOrderResult> => {
     return this.requestWithRefresh<IOrderResult>(`/order/${orderNumber}`, {
       method: 'GET',
-      headers: { Authorization: `Bearer ${getCookie('accessToken')}` },
     })
   }
 
@@ -214,9 +262,6 @@ export class WebLarekAPI extends Api implements IWebLarekAPI {
   ): Promise<IOrderResult> => {
     return this.requestWithRefresh<IOrderResult>(`/order/me/${orderNumber}`, {
       method: 'GET',
-      headers: {
-        Authorization: `Bearer ${getCookie('accessToken')}`,
-      },
     })
   }
 
@@ -224,9 +269,6 @@ export class WebLarekAPI extends Api implements IWebLarekAPI {
     return this.request<UserResponseToken>('/auth/login', {
       method: 'POST',
       body: JSON.stringify(data),
-      headers: {
-        'Content-Type': 'application/json',
-      },
       credentials: 'include',
     })
   }
@@ -235,9 +277,6 @@ export class WebLarekAPI extends Api implements IWebLarekAPI {
     return this.request<UserResponseToken>('/auth/register', {
       method: 'POST',
       body: JSON.stringify(data),
-      headers: {
-        'Content-Type': 'application/json',
-      },
       credentials: 'include',
     })
   }
@@ -245,14 +284,12 @@ export class WebLarekAPI extends Api implements IWebLarekAPI {
   getUser = () => {
     return this.requestWithRefresh<UserResponse>('/auth/user', {
       method: 'GET',
-      headers: { Authorization: `Bearer ${getCookie('accessToken')}` },
     })
   }
 
   getUserRoles = () => {
     return this.requestWithRefresh<string[]>('/auth/user/roles', {
       method: 'GET',
-      headers: { Authorization: `Bearer ${getCookie('accessToken')}` },
     })
   }
 
@@ -266,9 +303,6 @@ export class WebLarekAPI extends Api implements IWebLarekAPI {
       `/customers?${queryParams}`,
       {
         method: 'GET',
-        headers: {
-          Authorization: `Bearer ${getCookie('accessToken')}`,
-        },
       }
     )
   }
@@ -278,9 +312,6 @@ export class WebLarekAPI extends Api implements IWebLarekAPI {
       `/customers/${idCustomer}`,
       {
         method: 'GET',
-        headers: {
-          Authorization: `Bearer ${getCookie('accessToken')}`,
-        },
       }
     )
   }
@@ -293,14 +324,9 @@ export class WebLarekAPI extends Api implements IWebLarekAPI {
   }
 
   createProduct = (data: Omit<IProduct, '_id'>) => {
-    console.log(data)
     return this.requestWithRefresh<IProduct>('/product', {
       method: 'POST',
       body: JSON.stringify(data),
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${getCookie('accessToken')}`,
-      },
     }).then((data: IProduct) => ({
       ...data,
       image: {
@@ -311,12 +337,13 @@ export class WebLarekAPI extends Api implements IWebLarekAPI {
   }
 
   uploadFile = (data: FormData) => {
+    const headers = { ...this.options.headers } as Record<string, string>
+    delete headers['Content-Type'] // Браузер сам установит правильный Content-Type для FormData
+
     return this.requestWithRefresh<IFile>('/upload', {
       method: 'POST',
       body: data,
-      headers: {
-        Authorization: `Bearer ${getCookie('accessToken')}`,
-      },
+      headers,
     }).then((data) => ({
       ...data,
       fileName: data.fileName,
@@ -327,10 +354,6 @@ export class WebLarekAPI extends Api implements IWebLarekAPI {
     return this.requestWithRefresh<IProduct>(`/product/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(data),
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${getCookie('accessToken')}`,
-      },
     }).then((data: IProduct) => ({
       ...data,
       image: {
@@ -343,9 +366,6 @@ export class WebLarekAPI extends Api implements IWebLarekAPI {
   deleteProduct = (id: string) => {
     return this.requestWithRefresh<IProduct>(`/product/${id}`, {
       method: 'DELETE',
-      headers: {
-        Authorization: `Bearer ${getCookie('accessToken')}`,
-      },
     })
   }
 }
