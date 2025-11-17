@@ -45,6 +45,7 @@ import 'react-toastify/dist/ReactToastify.css'
 import { PersistGate } from 'redux-persist/integration/react'
 import AdminCustomerDetail from '../admin/admin-customer-detail'
 import ProfileOrderDetail from '../profile/profile-order-detail'
+import { getCookie } from '@utils/cookie'
 
 const App = () => (
   <BrowserRouter>
@@ -65,10 +66,23 @@ const RouteComponent = () => {
   const handleModalClose = (path: To | number) => () => navigate(path as To)
 
   useEffect(() => {
-    checkUserAuth()
-      .unwrap()
-      .finally(() => authCheck())
-  }, [checkUserAuth, authCheck])
+    // Добавляем проверку наличия refreshToken.
+    // Сервер устанавливает этот cookie при успешном логине, и он живет долго.
+    // Если его нет, то пользователь точно не авторизован, и нет смысла
+    // отправлять запрос на проверку, который заведомо провалится.
+    const refreshToken = getCookie('refreshToken');
+
+    if (!refreshToken) {
+      // Запускаем проверку только если есть шанс на успех.
+      checkUserAuth()
+        .unwrap()
+        .finally(() => authCheck())
+    } else {
+      // Если токена нет, мы просто отмечаем, что проверка завершена.
+      // Это уберет прелоадер и покажет пользователю публичную часть сайта.
+      authCheck();
+    }
+  },[checkUserAuth, authCheck])
 
   const locationState = location.state as { background?: Location }
   const background = locationState && locationState.background

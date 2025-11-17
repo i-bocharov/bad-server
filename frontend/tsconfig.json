@@ -30,6 +30,7 @@
       "@slices/*": ["./src/services/slice/*"],
       "@store/*": ["./src/services/*"],
       "@assets/*": ["./src/assets/*"],
+      "@utils/*": ["./src/utils/*"]
     }
   },
   "include": ["src", "vite.config.ts"],
