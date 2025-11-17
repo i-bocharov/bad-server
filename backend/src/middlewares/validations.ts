@@ -2,7 +2,7 @@ import { Joi, celebrate } from 'celebrate'
 import { Types } from 'mongoose'
 
 // eslint-disable-next-line no-useless-escape
-export const phoneRegExp = /^(\+\d+)?(?:\s|-?|\(?\d+\)?)+$/
+export const phoneRegExp = /^\+?[1-9]\d{1,14}$/
 
 export enum PaymentType {
   Card = 'card',
@@ -14,35 +14,45 @@ export const validateOrderBody = celebrate({
   body: Joi.object().keys({
     items: Joi.array()
       .items(
-        Joi.string().custom((value, helpers) => {
+        Joi.string().custom((value: string, helpers) => {
           if (Types.ObjectId.isValid(value)) {
             return value
           }
           return helpers.message({ custom: 'Невалидный id' })
         })
       )
+      .min(1)
+      .required()
       .messages({
-        'array.empty': 'Не указаны товары',
+        'array.min': 'Не указаны товары',
+        'any.required': 'Не указаны товары',
       }),
     payment: Joi.string()
       .valid(...Object.values(PaymentType))
       .required()
       .messages({
-        'string.valid':
+        'any.only':
           'Указано не валидное значение для способа оплаты, возможные значения - "card", "online"',
-        'string.empty': 'Не указан способ оплаты',
+        'any.required': 'Не указан способ оплаты',
       }),
     email: Joi.string().email().required().messages({
       'string.empty': 'Не указан email',
+      'string.email': 'Некорректный формат email',
+      'any.required': 'Не указан email',
     }),
     phone: Joi.string().required().pattern(phoneRegExp).messages({
       'string.empty': 'Не указан телефон',
+      'string.pattern.base': 'Некорректный формат телефона',
+      'any.required': 'Не указан телефон',
     }),
     address: Joi.string().required().messages({
       'string.empty': 'Не указан адрес',
+      'any.required': 'Не указан адрес',
     }),
-    total: Joi.number().required().messages({
-      'string.empty': 'Не указана сумма заказа',
+    total: Joi.number().positive().required().messages({
+      'number.base': 'Сумма заказа должна быть числом',
+      'number.positive': 'Сумма заказа должна быть положительной',
+      'any.required': 'Не указана сумма заказа',
     }),
     comment: Joi.string().optional().allow(''),
   }),
@@ -53,8 +63,8 @@ export const validateOrderBody = celebrate({
 export const validateProductBody = celebrate({
   body: Joi.object().keys({
     title: Joi.string().required().min(2).max(30).messages({
-      'string.min': 'Минимальная длина поля "name" - 2',
-      'string.max': 'Максимальная длина поля "name" - 30',
+      'string.min': 'Минимальная длина поля "title" - 2',
+      'string.max': 'Максимальная длина поля "title" - 30',
       'string.empty': 'Поле "title" должно быть заполнено',
     }),
     image: Joi.object().keys({
@@ -74,8 +84,8 @@ export const validateProductBody = celebrate({
 export const validateProductUpdateBody = celebrate({
   body: Joi.object().keys({
     title: Joi.string().min(2).max(30).messages({
-      'string.min': 'Минимальная длина поля "name" - 2',
-      'string.max': 'Максимальная длина поля "name" - 30',
+      'string.min': 'Минимальная длина поля "title" - 2',
+      'string.max': 'Максимальная длина поля "title" - 30',
     }),
     image: Joi.object().keys({
       fileName: Joi.string().required(),
@@ -91,11 +101,11 @@ export const validateObjId = celebrate({
   params: Joi.object().keys({
     productId: Joi.string()
       .required()
-      .custom((value, helpers) => {
+      .custom((value: string, helpers) => {
         if (Types.ObjectId.isValid(value)) {
           return value
         }
-        return helpers.message({ any: 'Невалидный id' })
+        return helpers.message({ custom: 'Невалидный id' })
       }),
   }),
 })
@@ -106,8 +116,9 @@ export const validateUserBody = celebrate({
       'string.min': 'Минимальная длина поля "name" - 2',
       'string.max': 'Максимальная длина поля "name" - 30',
     }),
-    password: Joi.string().min(6).required().messages({
+    password: Joi.string().min(8).required().messages({
       'string.empty': 'Поле "password" должно быть заполнено',
+      'string.min': 'Пароль должен быть не менее 8 символов',
     }),
     email: Joi.string()
       .required()
