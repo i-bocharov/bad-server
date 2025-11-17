@@ -4,8 +4,17 @@ import path from 'path'
 
 export default function serveStatic(baseDir: string) {
   return (req: Request, res: Response, next: NextFunction) => {
-    // Определяем полный путь к запрашиваемому файлу
-    const filePath = path.join(baseDir, req.path)
+    // Нормализуем путь, чтобы разрешить '..' и т.д.
+    const requestedPath = path.normalize(req.path)
+
+    // Создаем абсолютный путь к запрашиваемому файлу.
+    const filePath = path.join(baseDir, requestedPath)
+
+    // Проверяем, что итоговый путь все еще находится ВНУТРИ базовой директории.
+    if (!filePath.startsWith(baseDir)) {
+      // Попытка выхода за пределы разрешенной директории.
+      return res.status(403).send('Forbidden')
+    }
 
     // Проверяем, существует ли файл
     fs.access(filePath, fs.constants.F_OK, (err) => {
