@@ -24,8 +24,6 @@ const limiter = rateLimit({
   legacyHeaders: false, // Отключаем заголовки `X-RateLimit-*`
 })
 
-app.use(limiter)
-
 // Устанавливаем различные HTTP-заголовки (Strict-Transport-Security, X-Content-Type-Options, etc.),
 // которые защищают приложение от множества известных веб-уязвимостей.
 app.use(helmet())
@@ -40,6 +38,8 @@ app.use(serveStatic(path.join(__dirname, 'public')))
 
 app.use(urlencoded({ extended: true }))
 app.use(json())
+
+app.use(limiter)
 
 app.options('*', cors())
 app.use(routes)
