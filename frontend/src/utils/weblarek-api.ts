@@ -1,6 +1,5 @@
 import store, { RootState } from '@store/store'
 import { API_URL, CDN_URL } from '@constants'
-
 import {
   ICustomerPaginationResult,
   ICustomerResult,
@@ -18,7 +17,7 @@ import {
   UserResponseToken,
 } from '@types'
 import { setCookie } from './cookie'
-import { setAccessToken } from '@slices/user/user-slice'
+import { setAccessToken, logout } from '@slices/user/user-slice'
 
 // --- Начало механизма защиты от гонки состояний при обновлении токена ---
 
@@ -30,21 +29,15 @@ type FailedRequest = {
   reject: (reason?: unknown) => void
 }
 
-// Флаг, который показывает, что процесс обновления токена уже запущен.
+// Флаг, который не позволяет нескольким запросам одновременно инициировать обновление.
 let isRefreshing = false
 
-// Типизированная очередь для "зависших" запросов.
+// Очередь для запросов, которые "ждут" завершения обновления токена.
 let failedQueue: FailedRequest[] = []
 
 // Функция, которая обрабатывает очередь после завершения обновления токена.
 const processQueue = (error: Error | null) => {
-  failedQueue.forEach((prom) => {
-    if (error) {
-      prom.reject(error)
-    } else {
-      prom.resolve()
-    }
-  })
+  failedQueue.forEach((prom) => (error ? prom.reject(error) : prom.resolve()))
   failedQueue = []
 }
 
@@ -64,9 +57,10 @@ class Api {
     }
   }
 
-  // Принудительный выход из системы при невосстановимых ошибках авторизации.
+  // Принудительный выход из системы. Разрывает любой цикл.
   private forceLogout() {
-    setCookie('accessToken', '', { expires: new Date(0) })
+    store.dispatch(logout()) // Очищаем состояние Redux
+    setCookie('refreshToken', '', { expires: new Date(0) })
     window.location.replace('/login')
   }
 
@@ -80,12 +74,9 @@ class Api {
           )
   }
 
-  // Базовый метод запроса, который просто отправляет запрос с текущим токеном.
+  // Базовый метод, который просто отправляет запрос с токеном из Redux.
   protected async request<T>(endpoint: string, options: RequestInit) {
-    // Берем токен из Redux store, а не из cookie.
-    // Это делает store единственным источником правды.
     const accessToken = (store.getState() as RootState).user.accessToken
-
     const res = await fetch(`${this.baseUrl}${endpoint}`, {
       ...this.options,
       ...options,
@@ -98,8 +89,8 @@ class Api {
     return this.handleResponse<T>(res)
   }
 
-  // Метод для вызова эндпоинта обновления токена.
-  private refreshToken = () => {
+  // Метод, который вызывает эндпоинт обновления токена.
+  private refreshTokenRequest = () => {
     return fetch(`${this.baseUrl}/auth/token`, {
       method: 'GET',
       credentials: 'include', // Заставляет браузер отправить httpOnly refreshToken.
@@ -114,9 +105,14 @@ class Api {
     try {
       return await this.request<T>(endpoint, options)
     } catch (err: unknown) {
-      const error = err as { statusCode: number }
-      // Если это не ошибка 401, просто пробрасываем ее дальше.
-      if (error.statusCode !== 401) {
+      const error = err as { statusCode: number; message?: string }
+
+      // Если это не ошибка 401 или это ошибка "Необходима авторизация" (нет токена), просто пробрасываем.
+      if (
+        error.statusCode !== 401 ||
+        endpoint === '/auth/login' ||
+        endpoint === '/auth/register'
+      ) {
         throw err
       }
 
@@ -131,10 +127,10 @@ class Api {
 
       // Запускаем процесс обновления.
       return new Promise<T>((resolve, reject) => {
-        this.refreshToken()
+        this.refreshTokenRequest()
           .then((refreshData) => {
-            store.dispatch(setAccessToken(refreshData.accessToken))
-            processQueue(null) // Успех! "Отпускаем" все запросы из очереди.
+            store.dispatch(setAccessToken(refreshData.accessToken)) // Обновляем токен в Redux.
+            processQueue(null) // "Отпускаем" все запросы из очереди.
             resolve(this.request<T>(endpoint, options)) // Повторяем наш оригинальный запрос.
           })
           .catch((refreshErr) => {
@@ -168,24 +164,21 @@ export class WebLarekAPI extends Api implements IWebLarekAPI {
 
   // --- Публичные методы API ---
 
-  getProductItem = (id: string): Promise<IProduct> => {
-    return this.request<IProduct>(`/product/${id}`, { method: 'GET' }).then(
+  getProductItem = async (id: string) =>
+    this.request<IProduct>(`/product/${id}`, { method: 'GET' }).then(
       (data: IProduct) => ({
         ...data,
-        image: {
-          ...data.image,
-          fileName: this.cdn + data.image.fileName,
-        },
+        image: { ...data.image, fileName: this.cdn + data.image.fileName },
       })
     )
-  }
 
-  getProductList = (
+  getProductList = async (
     filters: Record<string, unknown> = {}
   ): Promise<IProductPaginationResult> => {
     const queryParams = new URLSearchParams(
       filters as Record<string, string>
     ).toString()
+
     return this.request<IProductPaginationResult>(`/product?${queryParams}`, {
       method: 'GET',
     }).then((data) => ({
@@ -200,125 +193,91 @@ export class WebLarekAPI extends Api implements IWebLarekAPI {
     }))
   }
 
-  createOrder = (order: IOrder): Promise<IOrderResult> => {
-    return this.requestWithRefresh<IOrderResult>('/order', {
+  createOrder = async (order: IOrder) =>
+    this.requestWithRefresh<IOrderResult>('/order', {
       method: 'POST',
       body: JSON.stringify(order),
     })
-  }
 
-  updateOrderStatus = (
-    status: StatusType,
-    orderNumber: string
-  ): Promise<IOrderResult> => {
-    return this.requestWithRefresh<IOrderResult>(`/order/${orderNumber}`, {
+  updateOrderStatus = async (status: StatusType, orderNumber: string) =>
+    this.requestWithRefresh<IOrderResult>(`/order/${orderNumber}`, {
       method: 'PATCH',
       body: JSON.stringify({ status }),
     })
-  }
 
-  getAllOrders = (
-    filters: Record<string, unknown> = {}
-  ): Promise<IOrderPaginationResult> => {
+  getAllOrders = async (filters: Record<string, unknown> = {}) => {
     const queryParams = new URLSearchParams(
       filters as Record<string, string>
     ).toString()
     return this.requestWithRefresh<IOrderPaginationResult>(
       `/order/all?${queryParams}`,
-      {
-        method: 'GET',
-      }
+      { method: 'GET' }
     )
   }
 
-  getCurrentUserOrders = (
-    filters: Record<string, unknown> = {}
-  ): Promise<IOrderPaginationResult> => {
+  getCurrentUserOrders = async (filters: Record<string, unknown> = {}) => {
     const queryParams = new URLSearchParams(
       filters as Record<string, string>
     ).toString()
     return this.requestWithRefresh<IOrderPaginationResult>(
       `/order/all/me?${queryParams}`,
-      {
-        method: 'GET',
-      }
+      { method: 'GET' }
     )
   }
 
-  getOrderByNumber = (orderNumber: string): Promise<IOrderResult> => {
-    return this.requestWithRefresh<IOrderResult>(`/order/${orderNumber}`, {
+  getOrderByNumber = async (orderNumber: string) =>
+    this.requestWithRefresh<IOrderResult>(`/order/${orderNumber}`, {
       method: 'GET',
     })
-  }
 
-  getOrderCurrentUserByNumber = (
-    orderNumber: string
-  ): Promise<IOrderResult> => {
-    return this.requestWithRefresh<IOrderResult>(`/order/me/${orderNumber}`, {
+  getOrderCurrentUserByNumber = async (orderNumber: string) =>
+    this.requestWithRefresh<IOrderResult>(`/order/me/${orderNumber}`, {
       method: 'GET',
     })
-  }
 
-  loginUser = (data: UserLoginBodyDto) => {
-    return this.request<UserResponseToken>('/auth/login', {
+  loginUser = async (data: UserLoginBodyDto) =>
+    this.request<UserResponseToken>('/auth/login', {
       method: 'POST',
       body: JSON.stringify(data),
       credentials: 'include',
     })
-  }
 
-  registerUser = (data: UserRegisterBodyDto) => {
-    return this.request<UserResponseToken>('/auth/register', {
+  registerUser = async (data: UserRegisterBodyDto) =>
+    this.request<UserResponseToken>('/auth/register', {
       method: 'POST',
       body: JSON.stringify(data),
       credentials: 'include',
     })
-  }
 
-  getUser = () => {
-    return this.requestWithRefresh<UserResponse>('/auth/user', {
-      method: 'GET',
-    })
-  }
+  getUser = async () =>
+    this.requestWithRefresh<UserResponse>('/auth/user', { method: 'GET' })
 
-  getUserRoles = () => {
-    return this.requestWithRefresh<string[]>('/auth/user/roles', {
-      method: 'GET',
-    })
-  }
+  getUserRoles = async () =>
+    this.requestWithRefresh<string[]>('/auth/user/roles', { method: 'GET' })
 
-  getAllCustomers = (
-    filters: Record<string, unknown> = {}
-  ): Promise<ICustomerPaginationResult> => {
+  getAllCustomers = async (filters: Record<string, unknown> = {}) => {
     const queryParams = new URLSearchParams(
       filters as Record<string, string>
     ).toString()
     return this.requestWithRefresh<ICustomerPaginationResult>(
       `/customers?${queryParams}`,
-      {
-        method: 'GET',
-      }
+      { method: 'GET' }
     )
   }
 
-  getCustomerById = (idCustomer: string) => {
-    return this.requestWithRefresh<ICustomerResult>(
-      `/customers/${idCustomer}`,
-      {
-        method: 'GET',
-      }
-    )
-  }
+  getCustomerById = async (idCustomer: string) =>
+    this.requestWithRefresh<ICustomerResult>(`/customers/${idCustomer}`, {
+      method: 'GET',
+    })
 
-  logoutUser = () => {
-    return this.request<ServerResponse<unknown>>('/auth/logout', {
+  logoutUser = async () =>
+    this.request<ServerResponse<unknown>>('/auth/logout', {
       method: 'GET',
       credentials: 'include',
     })
-  }
 
-  createProduct = (data: Omit<IProduct, '_id'>) => {
-    return this.requestWithRefresh<IProduct>('/product', {
+  createProduct = async (data: Omit<IProduct, '_id'>) =>
+    this.requestWithRefresh<IProduct>('/product', {
       method: 'POST',
       body: JSON.stringify(data),
     }).then((data: IProduct) => ({
@@ -328,9 +287,8 @@ export class WebLarekAPI extends Api implements IWebLarekAPI {
         fileName: this.cdn + data.image.fileName,
       },
     }))
-  }
 
-  uploadFile = (data: FormData) => {
+  uploadFile = async (data: FormData) => {
     const headers = { ...this.options.headers } as Record<string, string>
     delete headers['Content-Type'] // Браузер сам установит правильный Content-Type для FormData
 
@@ -344,8 +302,8 @@ export class WebLarekAPI extends Api implements IWebLarekAPI {
     }))
   }
 
-  updateProduct = (data: Partial<Omit<IProduct, '_id'>>, id: string) => {
-    return this.requestWithRefresh<IProduct>(`/product/${id}`, {
+  updateProduct = async (data: Partial<Omit<IProduct, '_id'>>, id: string) =>
+    this.requestWithRefresh<IProduct>(`/product/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(data),
     }).then((data: IProduct) => ({
@@ -355,13 +313,11 @@ export class WebLarekAPI extends Api implements IWebLarekAPI {
         fileName: this.cdn + data.image.fileName,
       },
     }))
-  }
 
-  deleteProduct = (id: string) => {
-    return this.requestWithRefresh<IProduct>(`/product/${id}`, {
+  deleteProduct = async (id: string) =>
+    this.requestWithRefresh<IProduct>(`/product/${id}`, {
       method: 'DELETE',
     })
-  }
 }
 
 export default new WebLarekAPI(CDN_URL, API_URL)
