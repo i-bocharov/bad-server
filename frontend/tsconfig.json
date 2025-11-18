@@ -22,6 +22,7 @@
     "noFallthroughCasesInSwitch": true,
     "forceConsistentCasingInFileNames": true,
     "paths": {
+      "@index.scss": ["./src/index.scss"],
       "@pages/*": ["./src/pages/*"],
       "@api": ["./src/utils/weblarek-api.ts"],
       "@types": ["./src/utils/types"],
