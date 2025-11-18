@@ -36,7 +36,7 @@ import MainPage from '@pages/main'
 import ProfilePage from '@pages/profile'
 import RegisterPage from '@pages/register/register-page'
 import { userActions } from '@slices/user'
-import { useActionCreators } from '@store/hooks'
+import { useActionCreators, useSelector } from '@store/hooks'
 import store, { persistor } from '@store/store'
 import { PropsWithChildren, useEffect } from 'react'
 import { Provider } from 'react-redux'
@@ -46,6 +46,8 @@ import { PersistGate } from 'redux-persist/integration/react'
 import AdminCustomerDetail from '../admin/admin-customer-detail'
 import ProfileOrderDetail from '../profile/profile-order-detail'
 import { getCookie } from '@utils/cookie'
+import { getIsAuthChecked } from '@slices/user/user-slice'
+import Spinner from '@components/spinner'
 
 const App = () => (
   <BrowserRouter>
@@ -65,11 +67,19 @@ const RouteComponent = () => {
   const { authCheck, checkUserAuth } = useActionCreators(userActions)
   const handleModalClose = (path: To | number) => () => navigate(path as To)
 
+  // Получаем флаг `isAuthChecked` из Redux store.
+  // Этот флаг станет `true` только после того, как мы решим, авторизован пользователь или нет.
+  const isAuthChecked = useSelector(getIsAuthChecked)
+
   useEffect(() => {
     // Добавляем проверку наличия refreshToken.
     // Сервер устанавливает этот cookie при успешном логине, и он живет долго.
     const refreshToken = getCookie('refreshToken');
 
+    // Добавляем условие `!isAuthChecked`.
+    // Это гарантирует, что проверка авторизации запустится только ОДИН РАЗ при старте приложения,
+    // а не при каждом ререндере компонента.
+    if (!isAuthChecked) {
     if (refreshToken) {
       // Если refreshToken СУЩЕСТВУЕТ, значит, у пользователя могла остаться
       // активная сессия. Мы запускаем `checkUserAuth`, чтобы получить
@@ -82,11 +92,19 @@ const RouteComponent = () => {
       // Мы не отправляем бессмысленный запрос на сервер, а сразу
       // завершаем проверку, чтобы приложение показало публичные страницы.
       authCheck();
-    }
-  },[checkUserAuth, authCheck])
+    }}
+  },[isAuthChecked,checkUserAuth, authCheck])
 
   const locationState = location.state as { background?: Location }
   const background = locationState && locationState.background
+
+  // Добавляем условный рендеринг.
+  // Пока `isAuthChecked` равно `false`, мы не показываем основное приложение.
+  // Это предотвращает отправку "плохих" запросов до того, как состояние будет
+  // полностью восстановлено и проверено.
+  if (!isAuthChecked) {
+    return <Spinner />;
+  }
 
   return (
     <>
