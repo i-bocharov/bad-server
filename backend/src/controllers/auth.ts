@@ -28,7 +28,7 @@ const login = async (req: Request, res: Response, next: NextFunction) => {
       user,
       accessToken,
     })
-  } catch (err) {
+  } catch (err: unknown) {
     return next(err)
   }
 }
@@ -87,53 +87,31 @@ const getCurrentUser = async (
   }
 }
 
-// Можно лучше: вынести общую логику получения данных из refresh токена
-const deleteRefreshTokenInUser = async (
-  req: Request,
-  _res: Response,
-  _next: NextFunction
-) => {
-  const { cookies } = req
-  const rfTkn = cookies[REFRESH_TOKEN.cookie.name]
-
-  if (!rfTkn) {
-    throw new UnauthorizedError('Не валидный токен')
-  }
-
-  const decodedRefreshTkn = jwt.verify(
-    rfTkn,
-    REFRESH_TOKEN.secret
-  ) as JwtPayload
-  const user = await User.findOne({
-    _id: decodedRefreshTkn._id,
-  }).orFail(() => new UnauthorizedError('Пользователь не найден в базе'))
-
-  const rTknHash = crypto
-    .createHmac('sha256', REFRESH_TOKEN.secret)
-    .update(rfTkn)
-    .digest('hex')
-
-  user.tokens = user.tokens.filter((tokenObj) => tokenObj.token !== rTknHash)
-
-  await user.save()
-
-  return user
-}
-
-// Реализация удаления токена из базы может отличаться
 // GET  /auth/logout
 const logout = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    await deleteRefreshTokenInUser(req, res, next)
-    const expireCookieOptions = {
-      ...REFRESH_TOKEN.cookie.options,
-      maxAge: -1,
+    const { cookies } = req
+    const rfTkn = cookies[REFRESH_TOKEN.cookie.name]
+
+    if (rfTkn) {
+      // Находим пользователя по токену и очищаем ВСЕ его токены.
+      // Это самый надежный способ обеспечить выход со всех устройств.
+      const decoded = jwt.verify(rfTkn, REFRESH_TOKEN.secret) as JwtPayload
+      await User.findByIdAndUpdate(
+        decoded.sub,
+        { $set: { tokens: [] } },
+        { new: true }
+      )
     }
-    res.cookie(REFRESH_TOKEN.cookie.name, '', expireCookieOptions)
-    res.status(200).json({
-      success: true,
-    })
+
+    // В любом случае очищаем cookie у клиента.
+    res.clearCookie(REFRESH_TOKEN.cookie.name, REFRESH_TOKEN.cookie.options)
+
+    return res.status(200).json({ success: true, message: 'Выход выполнен' })
   } catch (error: unknown) {
+    // Даже если была ошибка (например, токен невалиден), все равно очищаем cookie,
+    // чтобы разорвать возможные циклы на клиенте.
+    res.clearCookie(REFRESH_TOKEN.cookie.name, REFRESH_TOKEN.cookie.options)
     next(error)
   }
 }
@@ -145,36 +123,72 @@ const refreshAccessToken = async (
   next: NextFunction
 ) => {
   try {
-    const userWithRefreshTkn = await deleteRefreshTokenInUser(req, res, next)
-    const accessToken = userWithRefreshTkn.generateAccessToken()
-    const refreshToken = await userWithRefreshTkn.generateRefreshToken()
-    res.cookie(REFRESH_TOKEN.cookie.name, refreshToken, {
-      ...REFRESH_TOKEN.cookie.options,
-      sameSite: 'strict',
-    })
+    const { cookies } = req
+    const rfTkn = cookies[REFRESH_TOKEN.cookie.name]
+    if (!rfTkn) {
+      throw new UnauthorizedError('Refresh токен отсутствует')
+    }
+
+    // Проверяем валидность токена (подпись, срок действия).
+    const decoded = jwt.verify(rfTkn, REFRESH_TOKEN.secret) as JwtPayload
+    const user = await User.findById(decoded.sub).orFail(
+      () => new UnauthorizedError('Пользователь не найден')
+    )
+
+    // Проверяем, есть ли такой токен в нашей базе (не был ли он уже использован/отозван).
+    const rTknHash = crypto
+      .createHmac('sha256', REFRESH_TOKEN.secret)
+      .update(rfTkn)
+      .digest('hex')
+    const tokenExists = user.tokens.some(
+      (tokenObj) => tokenObj.token === rTknHash
+    )
+    if (!tokenExists) {
+      throw new UnauthorizedError('Токен отозван или недействителен')
+    }
+
+    // Удаляем ИСПОЛЬЗОВАННЫЙ токен из базы (стратегия "одноразовых" токенов).
+    user.tokens = user.tokens.filter((tokenObj) => tokenObj.token !== rTknHash)
+
+    // Генерируем НОВУЮ пару токенов.
+    const accessToken = user.generateAccessToken()
+    const newRefreshToken = await user.generateRefreshToken() // Эта функция сама сохранит новый токен в базу.
+
+    // Отправляем новый refresh-токен в httpOnly cookie.
+    res.cookie(
+      REFRESH_TOKEN.cookie.name,
+      newRefreshToken,
+      REFRESH_TOKEN.cookie.options
+    )
+
     return res.json({
       success: true,
-      user: userWithRefreshTkn,
+      user, // Возвращаем обновленные данные пользователя
       accessToken,
     })
-  } catch (error: unknown) {
-    return next(error)
+  } catch (_error: unknown) {
+    // Если на любом этапе возникла ошибка, очищаем cookie на клиенте.
+    // Это критически важно, чтобы разорвать цикл на фронтенде.
+    res.clearCookie(REFRESH_TOKEN.cookie.name, REFRESH_TOKEN.cookie.options)
+    // Возвращаем явную ошибку, чтобы фронтенд знал, что нужно разлогинить пользователя.
+    return next(
+      new UnauthorizedError('Ошибка авторизации, пожалуйста, войдите снова')
+    )
   }
 }
 
 const getCurrentUserRoles = async (
-  req: Request,
+  _req: Request,
   res: Response,
   next: NextFunction
 ) => {
-  const userId = res.locals.user._id
   try {
-    await User.findById(userId, req.body, {
-      new: true,
-    }).orFail(
+    // FIX: Убрана передача req.body, которая была бессмысленной и потенциально опасной.
+    // Мы просто находим пользователя по ID из `res.locals`.
+    const user = await User.findById(res.locals.user._id).orFail(
       () => new NotFoundError('Пользователь по заданному id отсутствует в базе')
     )
-    res.status(200).json(res.locals.user.roles)
+    res.status(200).json(user.roles)
   } catch (error: unknown) {
     next(error)
   }
@@ -185,16 +199,14 @@ const updateCurrentUser = async (
   res: Response,
   next: NextFunction
 ) => {
-  const userId = res.locals.user._id
   try {
-    // Явно указываем, какие поля разрешено обновлять.
-    // Это предотвратит смену роли (`roles`) или других критичных данных.
     const { name, email } = req.body
     const updateData = { name, email }
-    const updatedUser = await User.findByIdAndUpdate(userId, updateData, {
-      new: true,
-      runValidators: true, // runValidators важен для проверки email и длины имени
-    }).orFail(
+    const updatedUser = await User.findByIdAndUpdate(
+      res.locals.user._id,
+      updateData,
+      { new: true, runValidators: true }
+    ).orFail(
       () => new NotFoundError('Пользователь по заданному id отсутствует в базе')
     )
     res.status(200).json(updatedUser)
