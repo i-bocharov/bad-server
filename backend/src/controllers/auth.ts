@@ -94,12 +94,18 @@ const logout = async (req: Request, res: Response, next: NextFunction) => {
     const rfTkn = cookies[REFRESH_TOKEN.cookie.name]
 
     if (rfTkn) {
-      // Находим пользователя по токену и очищаем ВСЕ его токены.
-      // Это самый надежный способ обеспечить выход со всех устройств.
       const decoded = jwt.verify(rfTkn, REFRESH_TOKEN.secret) as JwtPayload
+
+      // Хешируем текущий токен для поиска в базе
+      const rTknHash = crypto
+        .createHmac('sha256', REFRESH_TOKEN.secret)
+        .update(rfTkn)
+        .digest('hex')
+
+      // Удаляем ТОЛЬКО текущий токен из массива
       await User.findByIdAndUpdate(
         decoded.sub,
-        { $set: { tokens: [] } },
+        { $pull: { tokens: { token: rTknHash } } },
         { new: true }
       )
     }
