@@ -40,11 +40,27 @@ export const validateOrderBody = celebrate({
       'string.email': 'Некорректный формат email',
       'any.required': 'Не указан email',
     }),
-    phone: Joi.string().required().pattern(phoneRegExp).messages({
-      'string.empty': 'Не указан телефон',
-      'string.pattern.base': 'Некорректный формат телефона',
-      'any.required': 'Не указан телефон',
-    }),
+    phone: Joi.string()
+      .required()
+      .custom((value, helpers) => {
+        // Очищаем номер от пробелов, скобок и тире
+        // Заменяем все, что НЕ цифра и НЕ плюс, на пустоту
+        const cleaned = value.replace(/[^\d+]/g, '')
+
+        // Проверяем "чистый" номер регуляркой
+        if (!phoneRegExp.test(cleaned)) {
+          // Если формат неверный (например, букв напихали или слишком короткий)
+          return helpers.message({ custom: 'Некорректный формат телефона' })
+        }
+
+        // Возвращаем ОЧИЩЕННОЕ значение
+        // Joi заменит исходное значение в req.body на то, что мы вернули здесь
+        return cleaned
+      })
+      .messages({
+        'string.empty': 'Не указан телефон',
+        'any.required': 'Не указан телефон',
+      }),
     address: Joi.string().required().messages({
       'string.empty': 'Не указан адрес',
       'any.required': 'Не указан адрес',
@@ -116,10 +132,17 @@ export const validateUserBody = celebrate({
       'string.min': 'Минимальная длина поля "name" - 2',
       'string.max': 'Максимальная длина поля "name" - 30',
     }),
-    password: Joi.string().min(8).required().messages({
-      'string.empty': 'Поле "password" должно быть заполнено',
-      'string.min': 'Пароль должен быть не менее 8 символов',
-    }),
+    password: Joi.string()
+      .required()
+      .min(8)
+      .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
+      .messages({
+        'string.empty': 'Поле "password" должно быть заполнено',
+        'string.min': 'Пароль должен быть не менее 8 символов',
+        'string.pattern.base':
+          'Пароль должен содержать цифры, заглавные и строчные буквы',
+        'any.required': 'Поле "password" должно быть заполнено',
+      }),
     email: Joi.string()
       .required()
       .email()

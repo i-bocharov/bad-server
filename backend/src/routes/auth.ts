@@ -10,6 +10,10 @@ import {
   updateCurrentUser,
 } from '../controllers/auth'
 import auth from '../middlewares/auth'
+import {
+  validateAuthentication,
+  validateUserBody,
+} from '../middlewares/validations'
 
 const authRouter = Router()
 
@@ -28,8 +32,8 @@ authRouter.patch('/me', auth, updateCurrentUser)
 authRouter.get('/user/roles', auth, getCurrentUserRoles)
 
 // Применяем строгий лимит к входу и регистрации
-authRouter.post('/login', authLimiter, login)
-authRouter.post('/register', authLimiter, register)
+authRouter.post('/login', authLimiter, validateAuthentication, login)
+authRouter.post('/register', authLimiter, validateUserBody, register)
 
 authRouter.get('/token', refreshAccessToken)
 authRouter.get('/logout', logout)
