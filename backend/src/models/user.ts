@@ -79,6 +79,10 @@ const userSchema = new mongoose.Schema<IUser, IUserModel, IUserMethods>(
     },
     phone: {
       type: String,
+      validate: {
+        validator: (v: string) => validator.isMobilePhone(v, 'any'),
+        message: 'Некорректный формат телефона',
+      },
     },
     lastOrderDate: {
       type: Date,
@@ -150,6 +154,14 @@ userSchema.methods.generateRefreshToken =
       .createHmac('sha256', REFRESH_TOKEN.secret)
       .update(refreshToken)
       .digest('hex')
+
+    // Ограничиваем количество сессий.
+    // Защита от переполнения базы данных (DoS).
+    const MAX_SESSIONS = 5
+    if (user.tokens.length >= MAX_SESSIONS) {
+      // Удаляем самые старые токены, оставляя место для нового
+      user.tokens = user.tokens.slice(user.tokens.length - (MAX_SESSIONS - 1))
+    }
 
     // Сохраняем refresh токена в базу данных, можно делать в контроллере авторизации/регистрации
     user.tokens.push({ token: rTknHash })
