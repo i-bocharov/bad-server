@@ -7,7 +7,7 @@ import mongoose from 'mongoose'
 import path from 'path'
 import helmet from 'helmet' // Импортируем helmet для установки защитных HTTP-заголовков.
 import rateLimit from 'express-rate-limit' // Импортируем express-rate-limit для защиты от брутфорс-атак и DDoS.
-import { DB_ADDRESS } from './config'
+import { DB_ADDRESS, ORIGIN_ALLOW } from './config'
 import errorHandler from './middlewares/error-handler'
 import serveStatic from './middlewares/serverStatic'
 import routes from './routes'
@@ -30,9 +30,7 @@ app.use(helmet())
 
 app.use(cookieParser())
 
-app.use(cors())
-// app.use(cors({ origin: ORIGIN_ALLOW, credentials: true }));
-// app.use(express.static(path.join(__dirname, 'public')));
+app.use(cors({ origin: ORIGIN_ALLOW, credentials: true }))
 
 app.use(serveStatic(path.join(__dirname, 'public')))
 
