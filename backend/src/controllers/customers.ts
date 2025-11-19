@@ -39,7 +39,11 @@ export const getCustomers = async (
     } = req.query as { [key: string]: string }
 
     const pageNum = parseInt(page, 10) || 1
-    const limitNum = parseInt(limit, 10) || 10
+
+    // Жесткий лимит на количество элементов.
+    // Защищает от переполнения памяти при запросе ?limit=1000000
+    const requestedLimit = parseInt(limit, 10) || 10
+    const limitNum = Math.min(requestedLimit, 100) // Ограничиваем максимум до 100
 
     const filters: FilterQuery<Partial<IUser>> = {}
 
@@ -109,12 +113,13 @@ export const getCustomers = async (
       // "сложную" регулярку, которая вызовет зависание сервера.
       const safeSearchString = escapeRegExp(search)
       const searchRegex = new RegExp(safeSearchString, 'i')
+
       const orders = await Order.find(
         {
           deliveryAddress: searchRegex,
         },
         '_id'
-      )
+      ).limit(1000) // Ограничиваем количество найденных заказов для производительности
 
       const orderIds = orders.map((order) => order._id)
 

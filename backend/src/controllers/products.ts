@@ -14,7 +14,10 @@ const getProducts = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { page = '1', limit = '5' } = req.query as { [key: string]: string }
     const pageNum = parseInt(page, 10) || 1
-    const limitNum = parseInt(limit, 10) || 5
+
+    const requestedLimit = parseInt(limit, 10) || 5
+    const limitNum = Math.min(requestedLimit, 100) // Ограничение максимального размера страницы до 100
+
     const options = {
       skip: (pageNum - 1) * limitNum,
       limit: limitNum,
@@ -22,6 +25,7 @@ const getProducts = async (req: Request, res: Response, next: NextFunction) => {
     const products = await Product.find({}, null, options)
     const totalProducts = await Product.countDocuments({})
     const totalPages = Math.ceil(totalProducts / limitNum)
+
     return res.send({
       items: products,
       pagination: {
