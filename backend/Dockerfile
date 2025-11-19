@@ -1,7 +1,9 @@
-FROM node:22-alpine
+FROM node:24-alpine
 RUN mkdir /app
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci
+COPY pnpm-lock.yaml ./
+RUN corepack enable
+RUN pnpm install --frozen-lockfile
 COPY . .
 CMD ["npm", "run", "dev"]

@@ -22,6 +22,7 @@
     "noFallthroughCasesInSwitch": true,
     "forceConsistentCasingInFileNames": true,
     "paths": {
+      "@index.scss": ["./src/index.scss"],
       "@pages/*": ["./src/pages/*"],
       "@api": ["./src/utils/weblarek-api.ts"],
       "@types": ["./src/utils/types"],
@@ -30,7 +31,8 @@
       "@slices/*": ["./src/services/slice/*"],
       "@store/*": ["./src/services/*"],
       "@assets/*": ["./src/assets/*"],
-    }
+      "@utils/*": ["./src/utils/*"],
+      "@services/*": ["./src/services/*"]}
   },
   "include": ["src", "vite.config.ts"],
   "references": [{ "path": "./tsconfig.node.json" }]

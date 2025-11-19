@@ -1,10 +1,10 @@
 class UnauthorizedError extends Error {
-    public statusCode: number
+  public statusCode: number
 
-    constructor(message: string) {
-        super(message)
-        this.statusCode = 401
-    }
+  constructor(message: string) {
+    super(message)
+    this.statusCode = 401
+  }
 }
 
 export default UnauthorizedError

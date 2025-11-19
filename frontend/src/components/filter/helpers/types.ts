@@ -1,4 +1,4 @@
 export interface FieldOption {
-    title: string
-    value: string | number
+  title: string
+  value: string | number
 }

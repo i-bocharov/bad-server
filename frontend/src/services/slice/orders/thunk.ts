@@ -1,33 +1,33 @@
 import { IOrderPaginationResult, IOrderResult, StatusType } from '@types'
-import { createAsyncThunk } from '../../hooks'
+import { createAsyncThunk } from '@services/hooks'
 
 export const getAllOrders = createAsyncThunk<IOrderPaginationResult, void>(
-    'orders/getAllOrders',
-    (_, { extra: { getAllOrders } }) => {
-        return getAllOrders()
-    }
+  'orders/getAllOrders',
+  (_, { extra: { getAllOrders } }) => {
+    return getAllOrders()
+  }
 )
 
 export const fetchOrdersWithFilters = createAsyncThunk<
-    IOrderPaginationResult,
-    Record<string, unknown>
+  IOrderPaginationResult,
+  Record<string, unknown>
 >('orders/fetchOrdersWithFilters', (filters, { extra: { getAllOrders } }) => {
-    return getAllOrders(filters)
+  return getAllOrders(filters)
 })
 
 export const getOrderByNumber = createAsyncThunk<IOrderResult, string>(
-    'orders/getOrderByNumber',
-    (orderNumber, { extra: { getOrderByNumber } }) => {
-        return getOrderByNumber(orderNumber)
-    }
+  'orders/getOrderByNumber',
+  (orderNumber, { extra: { getOrderByNumber } }) => {
+    return getOrderByNumber(orderNumber)
+  }
 )
 
 export const updateOrderById = createAsyncThunk<
-    IOrderResult,
-    { status: StatusType; orderNumber: string }
+  IOrderResult,
+  { status: StatusType; orderNumber: string }
 >(
-    'orders/updateOrderById',
-    ({ status, orderNumber }, { extra: { updateOrderStatus } }) => {
-        return updateOrderStatus(status, orderNumber)
-    }
+  'orders/updateOrderById',
+  ({ status, orderNumber }, { extra: { updateOrderStatus } }) => {
+    return updateOrderStatus(status, orderNumber)
+  }
 )
