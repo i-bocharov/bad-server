@@ -143,7 +143,7 @@ export const getOrders = async (
 
     aggregatePipeline.push(
       { $sort: sort },
-      { $skip: pageNum - 1 * limitNum },
+      { $skip: (pageNum - 1) * limitNum },
       { $limit: limitNum },
       {
         $group: {
