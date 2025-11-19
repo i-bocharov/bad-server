@@ -48,13 +48,7 @@ const storage = multer.diskStorage({
   },
 })
 
-const types = [
-  'image/png',
-  'image/jpg',
-  'image/jpeg',
-  'image/gif',
-  'image/svg+xml',
-]
+const types = ['image/png', 'image/jpg', 'image/jpeg', 'image/gif']
 
 const fileFilter = (
   _req: Request,
@@ -63,7 +57,9 @@ const fileFilter = (
 ) => {
   if (!types.includes(file.mimetype)) {
     return cb(
-      new FileTypeError('Недопустимый тип файла. Разрешены только изображения.')
+      new FileTypeError(
+        'Недопустимый тип файла. Разрешены только изображения (png, jpg, jpeg, gif).'
+      )
     )
   }
 
