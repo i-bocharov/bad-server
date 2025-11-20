@@ -3,7 +3,7 @@
 #### Default admin
 
 - login: `admin@mail.ru`
-- password: `Password123`
+- password: `password`
 
 #### Customer 1
 
