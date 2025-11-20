@@ -36,7 +36,7 @@ export const getOrders = async (
     const pageNum = parseInt(page, 10) || 1
 
     const requestedLimit = parseInt(limit, 10) || 10
-    const limitNum = Math.min(requestedLimit, 100) // Ограничение максимального размера страницы до 100
+    const limitNum = Math.min(requestedLimit, 10) // Ограничение максимального размера страницы до 10
 
     const filters: FilterQuery<Partial<IOrder>> = {}
 

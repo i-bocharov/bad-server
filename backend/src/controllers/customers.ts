@@ -43,7 +43,7 @@ export const getCustomers = async (
     // Жесткий лимит на количество элементов.
     // Защищает от переполнения памяти при запросе ?limit=1000000
     const requestedLimit = parseInt(limit, 10) || 10
-    const limitNum = Math.min(requestedLimit, 100) // Ограничиваем максимум до 100
+    const limitNum = Math.min(requestedLimit, 10) // Ограничиваем максимум до 10
 
     const filters: FilterQuery<Partial<IUser>> = {}
 
