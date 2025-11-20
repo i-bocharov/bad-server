@@ -7,6 +7,7 @@ import mongoose from 'mongoose'
 import path from 'path'
 import helmet from 'helmet' // Импортируем helmet для установки защитных HTTP-заголовков.
 import rateLimit from 'express-rate-limit' // Импортируем express-rate-limit для защиты от брутфорс-атак и DDoS.
+import mongoSanitize from 'express-mongo-sanitize'
 import { DB_ADDRESS, ORIGIN_ALLOW } from './config'
 import errorHandler from './middlewares/error-handler'
 import serveStatic from './middlewares/serverStatic'
@@ -36,6 +37,9 @@ app.use(serveStatic(path.join(__dirname, 'public')))
 
 app.use(urlencoded({ extended: true }))
 app.use(json())
+
+// Подключаем защиту от NoSQL инъекций
+app.use(mongoSanitize())
 
 app.use(limiter)
 
