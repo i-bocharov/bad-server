@@ -8,7 +8,7 @@
 #### Customer 1
 
 - login: `user1@mail.ru`
-- password: `Password123`
+- password: `password1`
 
 # How to restore database
 
