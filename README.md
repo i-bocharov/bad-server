@@ -2,7 +2,7 @@
 
 ## Ссылка на репозиторий
 
-[https://github.com/i-bocharov/bad-server](https://github.com/i-bocharov/bad-server)
+https://github.com/i-bocharov/bad-server
 
 ## Автор
 
