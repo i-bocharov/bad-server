@@ -5,6 +5,7 @@ import {
   PipelineStage,
   Types,
 } from 'mongoose'
+import sanitizeHtml from 'sanitize-html'
 import BadRequestError from '../errors/bad-request-error'
 import NotFoundError from '../errors/not-found-error'
 import Order, { IOrder, StatusType } from '../models/order'
@@ -200,7 +201,8 @@ export const getOrdersCurrentUser = async (
     }
 
     const pageNum = parseInt(page, 10) || 1
-    const limitNum = parseInt(limit, 10) || 5
+    const requestedLimit = parseInt(limit, 10) || 5
+    const limitNum = Math.min(requestedLimit, 10)
 
     const options = {
       skip: (pageNum - 1) * limitNum,
@@ -336,13 +338,19 @@ export const createOrder = async (
       return next(new BadRequestError('Неверная сумма заказа'))
     }
 
+    // Санитизация комментария (удаляем скрипты)
+    const safeComment = sanitizeHtml(comment || '', {
+      allowedTags: [],
+      allowedAttributes: {},
+    })
+
     const newOrder = new Order({
       totalAmount: total,
       products: items,
       payment,
       phone,
       email,
-      comment,
+      comment: safeComment,
       customer: res.locals.user._id,
       deliveryAddress: address,
     })
