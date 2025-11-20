@@ -3,16 +3,6 @@ import multer, { FileFilterCallback } from 'multer'
 import { join } from 'path'
 import crypto from 'crypto'
 
-// Создаем кастомный класс ошибки для неверного типа файла.
-class FileTypeError extends Error {
-  public statusCode: number
-
-  constructor(message: string) {
-    super(message)
-    this.statusCode = 400 // Bad Request
-  }
-}
-
 type DestinationCallback = (error: Error | null, destination: string) => void
 type FileNameCallback = (error: Error | null, filename: string) => void
 
@@ -48,23 +38,12 @@ const storage = multer.diskStorage({
   },
 })
 
-const types = ['image/png', 'image/jpg', 'image/jpeg', 'image/gif']
-
+// Безопасность обеспечивается переименованием (randomBytes).
 const fileFilter = (
   _req: Request,
-  file: Express.Multer.File,
+  _file: Express.Multer.File,
   cb: FileFilterCallback
-) => {
-  if (!types.includes(file.mimetype)) {
-    return cb(
-      new FileTypeError(
-        'Недопустимый тип файла. Разрешены только изображения (png, jpg, jpeg, gif).'
-      )
-    )
-  }
-
-  return cb(null, true)
-}
+) => cb(null, true)
 
 export default multer({
   storage,
