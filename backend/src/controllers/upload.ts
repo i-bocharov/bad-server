@@ -6,12 +6,21 @@ export const uploadFile = async (
   req: Request,
   res: Response,
   next: NextFunction
+  req: Request,
+  res: Response,
+  next: NextFunction
 ) => {
   if (!req.file) {
     return next(
       new BadRequestError('Файл не загружен или имеет неверный формат')
     )
   }
+
+  // Проверка минимального размера файла (2KB)
+  if (req.file.size < 2048) {
+    return next(new BadRequestError('Файл слишком маленький'))
+  }
+
   try {
     const filePath = process.env.UPLOAD_PATH
       ? `/${process.env.UPLOAD_PATH}/${req.file.filename}`

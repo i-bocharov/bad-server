@@ -4,7 +4,7 @@
   },
   "name": "Admin",
   "email": "admin@mail.ru",
-  "password": "$2a$10$/oQxkwYhshLy465/OOuA6OqZByU.6QAe4y4AobryG.Mdak6PzcOhu",
+  "password": "$2a$10$WQF3DBe9bG.kEZhNaRNBQuvFMQW6cUoIoD/kOc/J3XBfY72f5Z3uq",
   "roles": [
     "admin"
   ],
@@ -14,10 +14,13 @@
   "orderCount": 0,
   "orders": [],
   "tokens": [],
+  "tokens": [],
   "createdAt": {
+    "$date": "2025-11-20T12:59:58.737Z"
     "$date": "2025-11-20T12:59:58.737Z"
   },
   "updatedAt": {
+    "$date": "2025-11-20T18:03:56.272Z"
     "$date": "2025-11-20T18:03:56.272Z"
   }
 },
@@ -27,7 +30,7 @@
   },
   "name": "First Customer",
   "email": "user1@mail.ru",
-  "password": "$2a$10$/oQxkwYhshLy465/OOuA6OqZByU.6QAe4y4AobryG.Mdak6PzcOhu",
+  "password": "$2a$10$iT8D5hY8dYkp/vJj.ermJeyhz/ZrPtphTOEBQwV16yBlZjvwpBpwq",
   "roles": [
     "customer"
   ],
