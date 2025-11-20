@@ -9,7 +9,10 @@ import {
   updateOrder,
 } from '../controllers/order'
 import auth, { roleGuardMiddleware } from '../middlewares/auth'
-import { validateOrderBody } from '../middlewares/validations'
+import {
+  validateOrderBody,
+  validateGetOrders,
+} from '../middlewares/validations'
 import { Role } from '../models/user'
 
 const orderRouter = Router()
@@ -17,7 +20,13 @@ const orderRouter = Router()
 orderRouter.post('/', auth, validateOrderBody, createOrder)
 
 // Добавляем защиту roleGuardMiddleware(Role.Admin)
-orderRouter.get('/all', auth, roleGuardMiddleware(Role.Admin), getOrders)
+orderRouter.get(
+  '/all',
+  auth,
+  roleGuardMiddleware(Role.Admin),
+  validateGetOrders,
+  getOrders
+)
 
 orderRouter.get('/all/me', auth, getOrdersCurrentUser)
 orderRouter.get(
