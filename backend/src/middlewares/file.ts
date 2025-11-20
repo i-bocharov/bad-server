@@ -1,6 +1,6 @@
 import { Request, Express } from 'express'
 import multer, { FileFilterCallback } from 'multer'
-import { join } from 'path'
+import { join, extname } from 'path'
 import crypto from 'crypto'
 
 type DestinationCallback = (error: Error | null, destination: string) => void
@@ -32,7 +32,10 @@ const storage = multer.diskStorage({
     // Это позволяет злоумышленнику контролировать имя файла на сервере.
     // Вместо этого, генерируем случайное имя файла.
     const randomBytes = crypto.randomBytes(16).toString('hex')
-    const extension = file.originalname.split('.').pop() || ''
+    // Используем path.extname вместо split.
+    // Если файл называется 'image' (без точки), extname вернет '',
+    // и оригинальное имя 'image' НЕ попадет в безопасное имя файла.
+    const extension = extname(file.originalname)
     const safeFilename = `${randomBytes}.${extension}`
     cb(null, safeFilename)
   },
