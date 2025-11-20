@@ -1,7 +1,8 @@
 import { Request, Express } from 'express'
 import multer, { FileFilterCallback } from 'multer'
-import { join, extname } from 'path'
+import { join, extname, resolve } from 'path'
 import crypto from 'crypto'
+import fs from 'fs'
 
 type DestinationCallback = (error: Error | null, destination: string) => void
 type FileNameCallback = (error: Error | null, filename: string) => void
@@ -12,15 +13,19 @@ const storage = multer.diskStorage({
     _file: Express.Multer.File,
     cb: DestinationCallback
   ) => {
-    cb(
-      null,
-      join(
-        __dirname,
-        process.env.UPLOAD_PATH_TEMP
-          ? `../public/${process.env.UPLOAD_PATH_TEMP}`
-          : '../public'
-      )
-    )
+    // Строим путь от корня проекта (process.cwd()), а не от текущего файла.
+    const uploadPath = process.env.UPLOAD_PATH_TEMP
+      ? join('public', process.env.UPLOAD_PATH_TEMP)
+      : 'public'
+
+    const dir = resolve(process.cwd(), uploadPath)
+
+    // Создаем папку, если её нет. Без этого тест падает с ошибкой 500.
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true })
+    }
+
+    cb(null, dir)
   },
 
   filename: (
