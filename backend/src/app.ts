@@ -16,6 +16,10 @@ import routes from './routes'
 const { PORT = 3000 } = process.env
 const app = express()
 
+// Отключаем вложенный парсинг параметров запроса (например ?param[key]=val).
+// Это предотвращает передачу объектов в query, полностью защищая от NoSQL-инъекций в GET-запросах.
+app.set('query parser', 'simple')
+
 // Ограничиваем количество запросов с одного IP-адреса,
 // защищая от брутфорс-атак на эндпоинты входа и регистрации.
 const limiter = rateLimit({
