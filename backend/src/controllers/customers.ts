@@ -1,18 +1,8 @@
 import { NextFunction, Request, Response } from 'express'
 import { FilterQuery, SortOrder } from 'mongoose'
-import { FilterQuery, SortOrder } from 'mongoose'
 import NotFoundError from '../errors/not-found-error'
 import Order from '../models/order'
 import User, { IUser } from '../models/user'
-import escapeRegExp from '../utils/escapeRegExp' // Импортируем утилиту для экранирования спецсимволов в строке для RegExp
-
-// Определяем тип для полей сортировки, чтобы избежать передачи некорректных значений
-type CustomerSortFields =
-  | 'createdAt'
-  | 'totalAmount'
-  | 'orderCount'
-  | 'lastOrderDate'
-  | 'name'
 import escapeRegExp from '../utils/escapeRegExp' // Импортируем утилиту для экранирования спецсимволов в строке для RegExp
 
 // Определяем тип для полей сортировки, чтобы избежать передачи некорректных значений
@@ -27,9 +17,6 @@ type CustomerSortFields =
 // eslint-disable-next-line max-len
 // Get GET /customers?page=2&limit=5&sort=totalAmount&order=desc&registrationDateFrom=2023-01-01&registrationDateTo=2023-12-31&lastOrderDateFrom=2023-01-01&lastOrderDateTo=2023-12-31&totalAmountFrom=100&totalAmountTo=1000&orderCountFrom=1&orderCountTo=10
 export const getCustomers = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
   req: Request,
   res: Response,
   next: NextFunction
@@ -56,17 +43,10 @@ export const getCustomers = async (
     // Жесткий лимит на количество элементов.
     // Защищает от переполнения памяти при запросе ?limit=1000000
     const requestedLimit = parseInt(limit, 10) || 10
-    const limitNum = Math.min(requestedLimit, 10) // Ограничиваем максимум до 10
+    const limitNum = Math.min(requestedLimit, 10) // Ограничиваем максимум до 100
 
     const filters: FilterQuery<Partial<IUser>> = {}
-    const filters: FilterQuery<Partial<IUser>> = {}
 
-    if (registrationDateFrom) {
-      filters.createdAt = {
-        ...filters.createdAt,
-        $gte: new Date(registrationDateFrom),
-      }
-    }
     if (registrationDateFrom) {
       filters.createdAt = {
         ...filters.createdAt,
@@ -82,21 +62,7 @@ export const getCustomers = async (
         $lte: endOfDay,
       }
     }
-    if (registrationDateTo) {
-      const endOfDay = new Date(registrationDateTo)
-      endOfDay.setHours(23, 59, 59, 999)
-      filters.createdAt = {
-        ...filters.createdAt,
-        $lte: endOfDay,
-      }
-    }
 
-    if (lastOrderDateFrom) {
-      filters.lastOrderDate = {
-        ...filters.lastOrderDate,
-        $gte: new Date(lastOrderDateFrom),
-      }
-    }
     if (lastOrderDateFrom) {
       filters.lastOrderDate = {
         ...filters.lastOrderDate,
@@ -112,21 +78,7 @@ export const getCustomers = async (
         $lte: endOfDay,
       }
     }
-    if (lastOrderDateTo) {
-      const endOfDay = new Date(lastOrderDateTo)
-      endOfDay.setHours(23, 59, 59, 999)
-      filters.lastOrderDate = {
-        ...filters.lastOrderDate,
-        $lte: endOfDay,
-      }
-    }
 
-    if (totalAmountFrom) {
-      filters.totalAmount = {
-        ...filters.totalAmount,
-        $gte: Number(totalAmountFrom),
-      }
-    }
     if (totalAmountFrom) {
       filters.totalAmount = {
         ...filters.totalAmount,
@@ -140,12 +92,6 @@ export const getCustomers = async (
         $lte: Number(totalAmountTo),
       }
     }
-    if (totalAmountTo) {
-      filters.totalAmount = {
-        ...filters.totalAmount,
-        $lte: Number(totalAmountTo),
-      }
-    }
 
     if (orderCountFrom) {
       filters.orderCount = {
@@ -153,19 +99,7 @@ export const getCustomers = async (
         $gte: Number(orderCountFrom),
       }
     }
-    if (orderCountFrom) {
-      filters.orderCount = {
-        ...filters.orderCount,
-        $gte: Number(orderCountFrom),
-      }
-    }
 
-    if (orderCountTo) {
-      filters.orderCount = {
-        ...filters.orderCount,
-        $lte: Number(orderCountTo),
-      }
-    }
     if (orderCountTo) {
       filters.orderCount = {
         ...filters.orderCount,
@@ -186,44 +120,9 @@ export const getCustomers = async (
         },
         '_id'
       ).limit(1000) // Ограничиваем количество найденных заказов для производительности
-    if (search) {
-      // Экранируем пользовательский ввод перед созданием RegExp.
-      // Это предотвращает ReDoS-атаку, когда злоумышленник может передать
-      // "сложную" регулярку, которая вызовет зависание сервера.
-      const safeSearchString = escapeRegExp(search)
-      const searchRegex = new RegExp(safeSearchString, 'i')
-
-      const orders = await Order.find(
-        {
-          deliveryAddress: searchRegex,
-        },
-        '_id'
-      ).limit(1000) // Ограничиваем количество найденных заказов для производительности
 
       const orderIds = orders.map((order) => order._id)
-      const orderIds = orders.map((order) => order._id)
 
-      filters.$or = [{ name: searchRegex }, { lastOrder: { $in: orderIds } }]
-    }
-
-    // Типизируем объект сортировки, используя SortOrder из Mongoose.
-    const sort: { [key in CustomerSortFields]?: SortOrder } = {}
-
-    // Валидируем поля для сортировки по "белому списку".
-    // Это защищает от атак, которые могут использовать сортировку для получения информации о структуре данных.
-    const allowedSortFields: CustomerSortFields[] = [
-      'createdAt',
-      'totalAmount',
-      'orderCount',
-      'lastOrderDate',
-      'name',
-    ]
-
-    if (allowedSortFields.includes(sortField as CustomerSortFields)) {
-      sort[sortField as CustomerSortFields] = sortOrder === 'desc' ? -1 : 1
-    } else {
-      sort.createdAt = -1 // Сортировка по умолчанию
-    }
       filters.$or = [{ name: searchRegex }, { lastOrder: { $in: orderIds } }]
     }
 
@@ -251,19 +150,7 @@ export const getCustomers = async (
       skip: (pageNum - 1) * limitNum,
       limit: limitNum,
     }
-    const options = {
-      sort,
-      skip: (pageNum - 1) * limitNum,
-      limit: limitNum,
-    }
 
-    const users = await User.find(filters, null, options).populate([
-      'orders',
-      {
-        path: 'lastOrder',
-        populate: ['products', 'customer'],
-      },
-    ])
     const users = await User.find(filters, null, options).populate([
       'orders',
       {
@@ -274,21 +161,7 @@ export const getCustomers = async (
 
     const totalUsers = await User.countDocuments(filters)
     const totalPages = Math.ceil(totalUsers / limitNum)
-    const totalUsers = await User.countDocuments(filters)
-    const totalPages = Math.ceil(totalUsers / limitNum)
 
-    res.status(200).json({
-      customers: users,
-      pagination: {
-        totalUsers,
-        totalPages,
-        currentPage: pageNum,
-        pageSize: limitNum,
-      },
-    })
-  } catch (error: unknown) {
-    next(error)
-  }
     res.status(200).json({
       customers: users,
       pagination: {
@@ -309,19 +182,7 @@ export const getCustomerById = async (
   req: Request,
   res: Response,
   next: NextFunction
-  req: Request,
-  res: Response,
-  next: NextFunction
 ) => {
-  try {
-    const user = await User.findById(req.params.id).populate([
-      'orders',
-      'lastOrder',
-    ])
-    res.status(200).json(user)
-  } catch (error: unknown) {
-    next(error)
-  }
   try {
     const user = await User.findById(req.params.id).populate([
       'orders',
@@ -339,37 +200,7 @@ export const updateCustomer = async (
   req: Request,
   res: Response,
   next: NextFunction
-  req: Request,
-  res: Response,
-  next: NextFunction
 ) => {
-  try {
-    // Явно указываем поля, которые администратор может обновлять у пользователя.
-    const { name, email, phone, roles } = req.body
-    const updateData: Partial<IUser> = {}
-
-    if (name !== undefined) updateData.name = name
-    if (email !== undefined) updateData.email = email
-    if (phone !== undefined) updateData.phone = phone
-    if (roles !== undefined) updateData.roles = roles
-
-    const updatedUser = await User.findByIdAndUpdate(
-      req.params.id,
-      updateData,
-      {
-        new: true,
-        runValidators: true,
-      }
-    )
-      .orFail(
-        () =>
-          new NotFoundError('Пользователь по заданному id отсутствует в базе')
-      )
-      .populate(['orders', 'lastOrder'])
-    res.status(200).json(updatedUser)
-  } catch (error: unknown) {
-    next(error)
-  }
   try {
     // Явно указываем поля, которые администратор может обновлять у пользователя.
     const { name, email, phone, roles } = req.body
@@ -405,18 +236,7 @@ export const deleteCustomer = async (
   req: Request,
   res: Response,
   next: NextFunction
-  req: Request,
-  res: Response,
-  next: NextFunction
 ) => {
-  try {
-    const deletedUser = await User.findByIdAndDelete(req.params.id).orFail(
-      () => new NotFoundError('Пользователь по заданному id отсутствует в базе')
-    )
-    res.status(200).json(deletedUser)
-  } catch (error: unknown) {
-    next(error)
-  }
   try {
     const deletedUser = await User.findByIdAndDelete(req.params.id).orFail(
       () => new NotFoundError('Пользователь по заданному id отсутствует в базе')
