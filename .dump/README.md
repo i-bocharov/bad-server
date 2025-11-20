@@ -3,12 +3,12 @@
 #### Default admin
 
 - login: `admin@mail.ru`
-- password: `password`
+- password: `Password123`
 
 #### Customer 1
 
 - login: `user1@mail.ru`
-- password: `password1`
+- password: `Password123`
 
 # How to restore database
 

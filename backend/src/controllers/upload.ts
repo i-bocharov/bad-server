@@ -6,6 +6,9 @@ export const uploadFile = async (
   req: Request,
   res: Response,
   next: NextFunction
+  req: Request,
+  res: Response,
+  next: NextFunction
 ) => {
   if (!req.file) {
     return next(

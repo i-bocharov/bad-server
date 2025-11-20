@@ -36,6 +36,7 @@ app.use(helmet())
 app.use(cookieParser())
 
 app.use(cors({ origin: ORIGIN_ALLOW, credentials: true }))
+app.use(cors({ origin: ORIGIN_ALLOW, credentials: true }))
 
 app.use(serveStatic(path.join(__dirname, 'public')))
 
@@ -54,6 +55,12 @@ app.use(errorHandler)
 
 // eslint-disable-next-line no-console
 const bootstrap = async () => {
+  try {
+    await mongoose.connect(DB_ADDRESS)
+    await app.listen(PORT, () => console.log(`Сервер запущен на порту ${PORT}`))
+  } catch (error) {
+    console.error(`Ошибка при запуске сервера:`, error)
+  }
   try {
     await mongoose.connect(DB_ADDRESS)
     await app.listen(PORT, () => console.log(`Сервер запущен на порту ${PORT}`))

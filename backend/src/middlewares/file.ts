@@ -58,3 +58,8 @@ export default multer({
   fileFilter,
   limits: { fileSize: 5 * 1024 * 1024 }, // Лимит размера файла: 5 МБ
 })
+export default multer({
+  storage,
+  fileFilter,
+  limits: { fileSize: 5 * 1024 * 1024 }, // Лимит размера файла: 5 МБ
+})
