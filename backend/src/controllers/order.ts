@@ -5,6 +5,7 @@ import {
   PipelineStage,
   Types,
 } from 'mongoose'
+import sanitizeHtml from 'sanitize-html'
 import BadRequestError from '../errors/bad-request-error'
 import NotFoundError from '../errors/not-found-error'
 import Order, { IOrder, StatusType } from '../models/order'
@@ -336,13 +337,18 @@ export const createOrder = async (
       return next(new BadRequestError('Неверная сумма заказа'))
     }
 
+    const safeComment = sanitizeHtml(comment || '', {
+      allowedTags: [],
+      allowedAttributes: {},
+    })
+
     const newOrder = new Order({
       totalAmount: total,
       products: items,
       payment,
       phone,
       email,
-      comment,
+      comment: safeComment,
       customer: res.locals.user._id,
       deliveryAddress: address,
     })
